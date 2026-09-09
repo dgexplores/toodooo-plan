@@ -20,7 +20,9 @@ function harness(initialGoal = 'Ship the release safely.') {
   let goal = initialGoal;
   const hive = {
     recordSession() {},
-    isGod() { return false; }
+    isGod() { return false; },
+    // Auth is orthogonal here; the stub passes it so goal logic is reachable.
+    checkHookToken() { return true; }
   };
   const server = new HookServer(
     hive,

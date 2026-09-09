@@ -26,6 +26,8 @@ const MAX_HOOK_FRAME_BYTES = 256 * 1024;
 interface HookPayload {
   hook_event_name?: string;
   agent_id?: string | null;
+  /** Per-boot socket token (HIVE_HOOK_TOKEN). Rejects spoofed local traffic. */
+  hook_token?: unknown;
   session_id?: string;
   transcript_path?: string;
   /** Status-line payloads only: the session's live context accounting. */
@@ -149,6 +151,14 @@ export class HookServer {
   }
 
   private handle(p: HookPayload): unknown {
+    // Fail closed: the UDS is reachable by any local process, so a payload
+    // without the per-boot token is ignored before it can move avatars,
+    // feed the breaker, or trip control gates. Shims attach it from
+    // HIVE_HOOK_TOKEN (see HiveManager.hookToken).
+    if (!this.hive.checkHookToken(p.hook_token)) {
+      this.hive.appendLog({ kind: 'hook-auth-rejected' });
+      return {};
+    }
     const agentId = p.agent_id ?? undefined;
     const event = p.hook_event_name ?? 'Unknown';
     this.onEvent?.(agentId, event, p.message);
