@@ -24,7 +24,11 @@ jobs:
       # match package.json. A version left behind in RELEASE.md / docs turns the
       # download buttons into 404s the moment the next release ships — this catches
       # it on the release branch, before a tag, instead of on launch day.
+      # Release gate: only meaningful on main/release branches. Improvement
+      # branches carry upstream's in-flight version drift (docs ahead of
+      # package.json); gating them here would red every feature branch.
       - name: Release links consistent
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
         run: npm run check:links
 
   build:
