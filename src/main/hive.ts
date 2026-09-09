@@ -1585,6 +1585,23 @@ export class HiveManager {
     return true;
   }
 
+  /** Escalate a message to god; when god itself is absent the message is
+   *  preserved in dead-letter/ instead of vanishing with only a drop log.
+   *  Returns true when god took delivery. */
+  private escalateToGod(msg: HiveMessage, subject: string): boolean {
+    const godId = this.registry().godId ?? 'god';
+    if (this.deliver({ ...msg, to: godId, subject }, godId)) return true;
+    const root = this.root();
+    if (root) {
+      try {
+        mkdirSync(join(root, 'dead-letter'), { recursive: true });
+        this.atomicWriteJson(join(root, 'dead-letter', `${msg.id}.json`), msg);
+        this.appendLog({ kind: 'dead-letter', id: msg.id, from: msg.from, to: msg.to, subject });
+      } catch { /* best-effort; the caller's drop log already exists */ }
+    }
+    return false;
+  }
+
   /** Inject a message directly (used by the orchestrator / UI / tests). */
   send(partial: Partial<HiveMessage>, from = 'system'): HiveMessage {
     const msg = this.normalize(partial, from);
@@ -1602,16 +1619,9 @@ export class HiveManager {
     const fwd = { ...msg, hops: msg.hops + 1 };
     if (fwd.hops > HOP_CAP) {
       // Loop guard — escalate the runaway to god for adjudication rather than
-      // dropping it silently. If god itself is absent the deliver fails and only
-      // the drop log remains (same semantics as the no-inbox path below).
+      // dropping it silently (dead-letters when god itself is absent).
       this.appendLog({ kind: 'drop', reason: 'hop-cap', from: msg.from, to: msg.to, id: msg.id, hops: fwd.hops });
-      const capReg = this.registry();
-      const capGod = capReg.godId ?? 'god';
-      this.deliver({
-        ...fwd,
-        to: capGod,
-        subject: `[hop-cap — "${msg.from}"↔"${msg.to}" looped ${fwd.hops} hops; adjudicate] ${msg.subject}`
-      }, capGod);
+      this.escalateToGod(fwd, `[hop-cap — "${msg.from}"↔"${msg.to}" looped ${fwd.hops} hops; adjudicate] ${msg.subject}`);
       return;
     }
     const reg = this.registry();
@@ -1628,6 +1638,9 @@ export class HiveManager {
       // agent that direct mail reaches fine. See selectBroadcastTargets.
       ? selectBroadcastTargets(reg.agents, msg.from)
       // Never deliver to self — guards a god → "human" message looping back to god.
+      // Intentional: god IS the human's proxy, so god→human is god speaking in
+      // its own session — nothing to route. It is recorded in the message log
+      // with an empty delivered list, never bounced, never dropped.
       : [resolveTo(msg.to)].filter((t) => t !== msg.from);
     // Targets that actually took delivery. The log below reports these instead of
     // intent, so a bounced or dropped message can never read as delivered.
@@ -1639,11 +1652,7 @@ export class HiveManager {
       // unread for hours). Bounce such mail to god instead, so the sender's intent
       // surfaces immediately and nothing is silently lost.
       if (reg.agents[t]?.isAssistant) {
-        this.deliver({
-          ...fwd,
-          to: godId,
-          subject: `[bounced — "${t}" is the send-only prep assistant; route work to a real agent] ${msg.subject}`
-        }, godId);
+        this.escalateToGod(fwd, `[bounced — "${t}" is the send-only prep assistant; route work to a real agent] ${msg.subject}`);
         continue;
       }
       // A provider without safe-idle lifecycle state (a hookless custom command)
@@ -1654,11 +1663,7 @@ export class HiveManager {
       // (the bounce target).
       if (t !== godId && !canReceiveInbox(reg.agents[t]?.provider)) {
         if (!this.emitTerminalHandoff(fwd, t)) {
-          this.deliver({
-            ...fwd,
-            to: godId,
-            subject: `[undeliverable — "${t}" runs ${reg.agents[t]?.provider ?? 'a hookless CLI'} and the terminal handoff failed (renderer unavailable); relay this to it] ${msg.subject}`
-          }, godId);
+          this.escalateToGod(fwd, `[undeliverable — "${t}" runs ${reg.agents[t]?.provider ?? 'a hookless CLI'} and the terminal handoff failed (renderer unavailable); relay this to it] ${msg.subject}`);
         } else delivered.push(t);
         continue;
       }
@@ -1670,11 +1675,7 @@ export class HiveManager {
       const proxyDesc = bridgeOf(reg.agents[t]?.provider);
       if (t !== godId && proxyDesc?.kind === 'proxy' && proxyDesc.inboxDelivery === 'terminal') {
         if (!this.emitTerminalHandoff(fwd, t)) {
-          this.deliver({
-            ...fwd,
-            to: godId,
-            subject: `[undeliverable — "${t}" runs ${reg.agents[t]?.provider ?? 'a proxy-tier CLI'} and the terminal handoff failed (renderer unavailable); relay this to it] ${msg.subject}`
-          }, godId);
+          this.escalateToGod(fwd, `[undeliverable — "${t}" runs ${reg.agents[t]?.provider ?? 'a proxy-tier CLI'} and the terminal handoff failed (renderer unavailable); relay this to it] ${msg.subject}`);
         } else delivered.push(t);
         continue;
       }
@@ -1685,11 +1686,7 @@ export class HiveManager {
       // hop-cap one and bounce to god, mirroring the undeliverable bounces above.
       this.appendLog({ kind: 'drop', reason: 'no-inbox', from: msg.from, to: t, id: msg.id });
       if (t !== godId) {
-        this.deliver({
-          ...fwd,
-          to: godId,
-          subject: `[undeliverable — no agent "${t}" on this floor; check the id against the roster] ${msg.subject}`
-        }, godId);
+        this.escalateToGod(fwd, `[undeliverable — no agent "${t}" on this floor; check the id against the roster] ${msg.subject}`);
       }
     }
     this.appendLog({ kind: 'message', from: msg.from, to: msg.to, act: msg.act, subject: msg.subject, id: msg.id, delivered });
