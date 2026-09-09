@@ -31,6 +31,11 @@ async function floor(t) {
 function writeOutbox(outbox, filename, raw) {
   const file = path.join(outbox, filename);
   fs.writeFileSync(file, raw, 'utf8');
+  // Age fixtures past the router's torn-read settle window: these tests cover
+  // repair/quarantine logic for complete files, not the fresh-file wait-a-pass
+  // path (covered in hive-outbox-races.test.cjs).
+  const old = Date.now() - 60_000;
+  fs.utimesSync(file, old / 1000, old / 1000);
   return file;
 }
 

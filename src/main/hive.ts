@@ -190,6 +190,10 @@ export interface SpawnInjection {
 }
 
 const HOP_CAP = 12;
+/** Outbox files failing to parse within this age are likely mid-write by an
+ *  external agent process (agents write plain JSON, not tmp+rename) — skip the
+ *  pass instead of quarantining a torn read. Stale failures still quarantine. */
+const OUTBOX_SETTLE_MS = 2000;
 
 function sleepSync(ms: number): void {
   const sab = new SharedArrayBuffer(4);
@@ -1775,6 +1779,7 @@ export class HiveManager {
           try {
             partial = JSON.parse(raw) as Partial<HiveMessage>;
           } catch {
+            if (this.isSettling(full)) continue; // torn read — retry next pass
             const repaired = repairLiteralLineBreaksInJsonStrings(raw);
             if (!repaired.changed) {
               this.appendLog({ kind: 'drop', reason: 'malformed-json', from: id, file: f });
@@ -1784,6 +1789,7 @@ export class HiveManager {
             try {
               partial = JSON.parse(repaired.text) as Partial<HiveMessage>;
             } catch {
+              if (this.isSettling(full)) continue; // torn read — retry next pass
               this.appendLog({ kind: 'drop', reason: 'malformed-json', from: id, file: f });
               try { renameSync(full, join(outbox, '.sent', `bad-${f}`)); } catch { /* noop */ }
               continue;
@@ -1798,6 +1804,13 @@ export class HiveManager {
           const msg = this.normalize(partial, id);
           msg.from = id; // sender is authoritative — the owning directory
           this.routeMessage(msg);
+          if (!this.unchangedSince(full, raw)) {
+            // The agent rewrote the file mid-route: the routed content is
+            // already delivered, but archiving now would bury the rewrite
+            // unprocessed. Leave it for the next pass.
+            this.appendLog({ kind: 'outbox-rewrite-skipped', from: id, file: f });
+            continue;
+          }
           renameSync(full, join(outbox, '.sent', f)); // archive, don't reprocess
           routed++;
         } catch {
@@ -1808,6 +1821,26 @@ export class HiveManager {
     }
     if (routed > 0) this.commit(`hive: routed ${routed} message(s)`);
     return routed;
+  }
+
+  /** True when the file was modified recently enough that a parse failure is
+   *  more likely a torn read than a genuinely malformed message. */
+  private isSettling(p: string, now = Date.now()): boolean {
+    try {
+      return now - statSync(p).mtimeMs < OUTBOX_SETTLE_MS;
+    } catch {
+      return false;
+    }
+  }
+
+  /** True when the file still holds exactly the content we routed. Guards the
+   *  archive step against an agent rewrite landing mid-route. */
+  private unchangedSince(p: string, raw: string): boolean {
+    try {
+      return readFileSync(p, 'utf8') === raw;
+    } catch {
+      return false;
+    }
   }
 
   // — read helpers (for IPC / UI) —
