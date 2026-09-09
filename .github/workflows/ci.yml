@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, 'release/**']
+    branches: [main, 'release/**', 'codebase', 'improve/**']
   pull_request:
-    branches: [main, 'release/**']
+    branches: [main, 'release/**', 'codebase', 'improve/**']
 
 jobs:
   typecheck:
