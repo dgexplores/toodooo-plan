@@ -1594,10 +1594,24 @@ export class HiveManager {
   }
 
   private routeMessage(msg: HiveMessage): void {
-    if (msg.hops > HOP_CAP) {
-      // loop guard — drop a runaway message rather than let agents ping-pong.
-      // There's no human queue to fall back on; the god agent owns conflicts.
-      this.appendLog({ kind: 'drop', reason: 'hop-cap', from: msg.from, to: msg.to, id: msg.id });
+    // Every forward consumes one hop, so a request↔reply ping-pong terminates
+    // instead of riding the router forever (forwards used to preserve hops, so
+    // the cap below never fired). Replies chain because agents copy the hops of
+    // the message they answer (HIVE.md §4, PROTOCOL.md); a fresh message starts
+    // at 0 via normalize.
+    const fwd = { ...msg, hops: msg.hops + 1 };
+    if (fwd.hops > HOP_CAP) {
+      // Loop guard — escalate the runaway to god for adjudication rather than
+      // dropping it silently. If god itself is absent the deliver fails and only
+      // the drop log remains (same semantics as the no-inbox path below).
+      this.appendLog({ kind: 'drop', reason: 'hop-cap', from: msg.from, to: msg.to, id: msg.id, hops: fwd.hops });
+      const capReg = this.registry();
+      const capGod = capReg.godId ?? 'god';
+      this.deliver({
+        ...fwd,
+        to: capGod,
+        subject: `[hop-cap — "${msg.from}"↔"${msg.to}" looped ${fwd.hops} hops; adjudicate] ${msg.subject}`
+      }, capGod);
       return;
     }
     const reg = this.registry();
@@ -1626,7 +1640,7 @@ export class HiveManager {
       // surfaces immediately and nothing is silently lost.
       if (reg.agents[t]?.isAssistant) {
         this.deliver({
-          ...msg,
+          ...fwd,
           to: godId,
           subject: `[bounced — "${t}" is the send-only prep assistant; route work to a real agent] ${msg.subject}`
         }, godId);
@@ -1639,9 +1653,9 @@ export class HiveManager {
       // if the renderer is unavailable, bounce to god to relay. God is exempt
       // (the bounce target).
       if (t !== godId && !canReceiveInbox(reg.agents[t]?.provider)) {
-        if (!this.emitTerminalHandoff(msg, t)) {
+        if (!this.emitTerminalHandoff(fwd, t)) {
           this.deliver({
-            ...msg,
+            ...fwd,
             to: godId,
             subject: `[undeliverable — "${t}" runs ${reg.agents[t]?.provider ?? 'a hookless CLI'} and the terminal handoff failed (renderer unavailable); relay this to it] ${msg.subject}`
           }, godId);
@@ -1655,16 +1669,16 @@ export class HiveManager {
       // provider; the synthesized Stop→drain keeps the cursor in step.
       const proxyDesc = bridgeOf(reg.agents[t]?.provider);
       if (t !== godId && proxyDesc?.kind === 'proxy' && proxyDesc.inboxDelivery === 'terminal') {
-        if (!this.emitTerminalHandoff(msg, t)) {
+        if (!this.emitTerminalHandoff(fwd, t)) {
           this.deliver({
-            ...msg,
+            ...fwd,
             to: godId,
             subject: `[undeliverable — "${t}" runs ${reg.agents[t]?.provider ?? 'a proxy-tier CLI'} and the terminal handoff failed (renderer unavailable); relay this to it] ${msg.subject}`
           }, godId);
         } else delivered.push(t);
         continue;
       }
-      if (this.deliver(msg, t)) { delivered.push(t); continue; }
+      if (this.deliver(fwd, t)) { delivered.push(t); continue; }
       // No agents/<t>/inbox — an id that isn't on the floor. This was the one
       // delivery failure with neither bounce nor log, so the sender saw a routed
       // message and the mail simply ceased to exist. Record the drop beside the
@@ -1672,7 +1686,7 @@ export class HiveManager {
       this.appendLog({ kind: 'drop', reason: 'no-inbox', from: msg.from, to: t, id: msg.id });
       if (t !== godId) {
         this.deliver({
-          ...msg,
+          ...fwd,
           to: godId,
           subject: `[undeliverable — no agent "${t}" on this floor; check the id against the roster] ${msg.subject}`
         }, godId);
@@ -2879,6 +2893,9 @@ The harness fills in \`id\`, \`from\`, \`hops\`, and timestamps.
 ## Rules of the road
 - Only \`request\`, \`query\`, and \`propose\` expect a reply. \`inform\` and \`done\` are terminal —
   don't reply to them, or two agents will loop forever.
+- When you DO reply, copy the \`hops\` number from the message you're answering into
+  your reply. Every delivery consumes one hop and the harness escalates past 12,
+  so a copied count is what lets a runaway thread terminate instead of looping.
 - For anything ambiguous, cross-cutting, or needing sign-off, message \`god\` — the
   god agent clarifies answers for you so you rarely need the human directly.
 - There is NO separate human-approval queue. Human-in-the-loop is native to Claude
