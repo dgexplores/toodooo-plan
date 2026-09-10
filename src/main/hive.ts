@@ -21,7 +21,7 @@
 import {
   existsSync, mkdirSync, readFileSync, writeFileSync, renameSync,
   readdirSync, statSync, lstatSync, realpathSync, rmSync, appendFileSync,
-  symlinkSync, unlinkSync, copyFileSync, cpSync, chmodSync
+  symlinkSync, unlinkSync, copyFileSync, cpSync, chmodSync, openSync, readSync, closeSync
 } from 'node:fs';
 import { join, dirname, basename, isAbsolute, relative } from 'node:path';
 import { homedir } from 'node:os';
@@ -39,6 +39,7 @@ import {
 } from '../shared/agentProvider';
 import { MCP_CATALOG } from '../shared/mcpCatalog';
 import { selectBroadcastTargets } from '../shared/broadcast';
+import { LOG_TAIL_BYTES } from '../shared/limits';
 import { preferredAgentRole } from '../shared/agentRole';
 import { mergeTaskLedger } from '../shared/taskLedger';
 import { expandTilde } from './fs';
@@ -2660,7 +2661,39 @@ export class HiveManager {
   logTail(n = 200): unknown[] {
     const root = this.root();
     if (!root || !existsSync(join(root, 'log.jsonl'))) return [];
-    const lines = readFileSync(join(root, 'log.jsonl'), 'utf8').trim().split('\n').filter(Boolean);
+    // Windowed read: the file grows forever and callers poll it, so parsing
+    // the whole thing per call is a latency + memory leak. Read at most
+    // LOG_TAIL_BYTES off the end; a mid-line cut at the window start would
+    // parse as {raw}, so drop the first line whenever we windowed.
+    const p = join(root, 'log.jsonl');
+    let text: string;
+    try {
+      const size = statSync(p).size;
+      if (size <= LOG_TAIL_BYTES) {
+        text = readFileSync(p, 'utf8');
+      } else {
+        const fd = openSync(p, 'r');
+        try {
+          // If the byte just before the window is a newline, the window starts
+          // on a line boundary and nothing is partial.
+          const probe = Buffer.alloc(1);
+          let cleanStart = false;
+          if (size > LOG_TAIL_BYTES) {
+            readSync(fd, probe, 0, 1, size - LOG_TAIL_BYTES - 1);
+            cleanStart = probe[0] === 0x0a;
+          }
+          const buf = Buffer.alloc(LOG_TAIL_BYTES);
+          readSync(fd, buf, 0, LOG_TAIL_BYTES, size - LOG_TAIL_BYTES);
+          text = buf.toString('utf8');
+          if (!cleanStart) text = text.slice(text.indexOf('\n') + 1);
+        } finally {
+          closeSync(fd);
+        }
+      }
+    } catch {
+      return [];
+    }
+    let lines = text.trim().split('\n').filter(Boolean);
     return lines.slice(-n).map((l) => { try { return JSON.parse(l); } catch { return { raw: l }; } });
   }
 

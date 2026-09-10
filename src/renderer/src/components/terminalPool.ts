@@ -21,6 +21,7 @@ import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { arabicJoinRanges } from '@/terminal/arabicJoiner';
 import { attachArabicSpacingFix } from '@/terminal/arabicSpacingFix';
 import { isArabicTerminalEnabled } from '@/terminal/arabicSetting';
+import { SCROLLBACK_MAX } from '@shared/limits';
 import {
   classifyPathToken, isPathToken, pathTokenMatcher, stripPathToken, type PathAction
 } from '@shared/terminalPaths';
@@ -137,7 +138,9 @@ export function acquireTerminal(ptyId: string, theme?: ThemeMap, fontSize = 14):
     lineHeight: 1.0,
     cursorBlink: true,
     cursorStyle: 'block',
-    scrollback: 100000,
+    // Capped by SCROLLBACK_MAX (shared/limits): 100k lines × N agents was
+    // 50–100MB per churning TUI with no ceiling in sight.
+    scrollback: SCROLLBACK_MAX,
     // Guarantee legible text no matter what colors a running program sets.
     // When a program paints a coloured cell background (e.g. a git-diff add line
     // with a green bg, or a yellow-highlighted line) while leaving the default

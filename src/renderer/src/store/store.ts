@@ -13,6 +13,7 @@ import {
   type HireReviewQueue
 } from '@shared/hireQueue';
 import { DEFAULT_ORG_TRIGGER, type OrgTriggerConfig, type WebhookTrigger } from '@shared/triggers';
+import { capTail, FEED_MAX, QUEUE_MAX } from '@shared/limits';
 import { isCompactionCommand } from '@shared/providerAutomation';
 import { preferredAgentRole } from '@shared/agentRole';
 import { isInboxNudge } from '@shared/hiveNudge';
@@ -760,7 +761,7 @@ export const useStore = create<State>((set, get) => ({
       return { agents };
     }),
   pushFeed: (id, line) =>
-    set((s) => ({ feeds: { ...s.feeds, [id]: [...(s.feeds[id] ?? []), line] } })),
+    set((s) => ({ feeds: { ...s.feeds, [id]: capTail([...(s.feeds[id] ?? []), line], FEED_MAX) } })),
   addAgent: (agent) =>
     set((s) => {
       // Idempotent by id: a MAIN-initiated spawn broadcast (hive:agentSpawned, e.g.
@@ -927,7 +928,14 @@ export const useStore = create<State>((set, get) => ({
         ...(meta?.precondition ? { precondition: meta.precondition } : {}),
         ...(meta?.compactUsed !== undefined ? { compactUsed: meta.compactUsed } : {})
       };
-      const messageQueues = { ...s.messageQueues, [agentId]: [...(s.messageQueues[agentId] ?? []), msg] };
+      const next = [...(s.messageQueues[agentId] ?? []), msg];
+      if (next.length > QUEUE_MAX) {
+        // Bounded like the steer queue: drop oldest, warn once per overflow so
+        // a stalled agent can't grow memory (and localStorage) without bound.
+        console.warn(`[queues] ${agentId}: queue over ${QUEUE_MAX} — dropping oldest`);
+        next.splice(0, next.length - QUEUE_MAX);
+      }
+      const messageQueues = { ...s.messageQueues, [agentId]: next };
       persistQueues(messageQueues);
       return { messageQueues };
     }),
