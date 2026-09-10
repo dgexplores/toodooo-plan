@@ -48,7 +48,7 @@ import { useRtl } from '@/i18n/useDirection';
 // the old Schedules tab: schedules are now one of four trigger types, and the
 // whole surface lives in ./triggers (see src/shared/triggers.ts for the contract).
 type CCTab = 'terminal' | 'floor' | 'tasks' | 'human' | 'triggers' | 'trigger-history'
-  | 'memory' | 'graph' | 'activity' | 'skills' | 'workers';
+  | 'memory' | 'graph' | 'activity' | 'skills' | 'workers' | 'spend';
 
 /** Fallback denominator for the per-agent token meter when no floor token budget
  *  is configured — so the bar reads as a budget estimate (filled + remaining)
@@ -77,7 +77,8 @@ const TABS: { key: CCTab; labelKey: string; icon: Parameters<typeof Icon>[0]['na
   { key: 'graph', labelKey: 'commandCenter.tabs.graph', icon: 'web' },
   { key: 'activity', labelKey: 'commandCenter.tabs.activity', icon: 'bell' },
   { key: 'skills', labelKey: 'commandCenter.tabs.skills', icon: 'sparkle' },
-  { key: 'workers', labelKey: 'commandCenter.tabs.workers', icon: 'gear' }
+  { key: 'workers', labelKey: 'commandCenter.tabs.workers', icon: 'gear' },
+  { key: 'spend', labelKey: 'commandCenter.tabs.spend', icon: 'ledger' }
 ];
 
 /** @param fullscreen this instance IS the fullscreen overlay, so it owns the pty
@@ -337,6 +338,7 @@ export function CommandCenterPanel({ agent, fullscreen = false }: { agent: Agent
         {tab === 'activity' && <ActivityTab />}
         {tab === 'skills' && <SkillsTab agentCwd={agent.cwd} />}
         {tab === 'workers' && <WorkersTab />}
+        {tab === 'spend' && <SpendTab />}
       </div>
     </PixelPanel>
   );
@@ -1247,6 +1249,64 @@ function TokenLimitEditor({ value, onSet }: { value?: number; onSet: (tokens: nu
         style={{ flexShrink: 0, padding: '1px 5px', border: 'none', cursor: 'pointer', background: 'var(--cth-mint)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)', fontSize: 11, color: 'var(--cth-ink-900)' }}
       >✓</button>
     </span>
+  );
+}
+
+// ─── Spend tab — IST-day totals by client (R-11 visible end) ─────────────────
+// Reads cost:byClient (main sums the ledger, no recompute here) + the manual
+// FX rate for dual display. Export stays IPC-ready (client:export) pending a
+// directory picker; the query is the contract.
+function SpendTab() {
+  const { t } = useTranslation();
+  const [data, setData] = useState<{ byClient: Record<string, number>; unattributed: number; total: number } | null>(null);
+  const [rate, setRate] = useState<number | null>(null);
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    const refresh = async (): Promise<void> => {
+      try { setData(await window.cth.costByClient()); } catch { /* noop */ }
+      try {
+        const c = await window.cth.getConfig();
+        setRate(typeof c.fxUsdInr === 'number' && c.fxUsdInr > 0 ? c.fxUsdInr : null);
+      } catch { /* noop */ }
+    };
+    refresh();
+    timer.current = setInterval(refresh, 5000);
+    return () => { if (timer.current) clearInterval(timer.current); };
+  }, []);
+
+  const inr = (usd: number): string => {
+    if (rate === null) return '';
+    const v = usd * rate;
+    if (v < 1) return ' (<₹1)';
+    return ` (₹${v.toLocaleString('en-IN', { maximumFractionDigits: 0 })})`;
+  };
+
+  const rows = data ? Object.entries(data.byClient).sort((a, b) => b[1] - a[1]) : [];
+  return (
+    <Scroll>
+      <Section title={t('commandCenter.spendTitle')}>
+        {!data && <Muted>{t('commandCenter.nothingYet')}</Muted>}
+        {data && (
+          <>
+            <div style={{ fontSize: 14, marginBottom: 6 }}>
+              ${data.total.toFixed(2)}{inr(data.total)} {t('commandCenter.spendToday')}
+            </div>
+            {rows.map(([client, usd]) => (
+              <div key={client} style={{ fontSize: 12, display: 'flex', gap: 8, padding: '2px 0' }}>
+                <span style={{ minWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}>{client}</span>
+                <span>${usd.toFixed(2)}{inr(usd)}</span>
+              </div>
+            ))}
+            {data.unattributed > 0 && (
+              <div style={{ fontSize: 12, color: 'var(--cth-ink-500)', padding: '2px 0' }}>
+                {t('commandCenter.spendUnattributed')}: ${data.unattributed.toFixed(2)}{inr(data.unattributed)}
+              </div>
+            )}
+          </>
+        )}
+      </Section>
+    </Scroll>
   );
 }
 
