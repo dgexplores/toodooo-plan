@@ -1419,8 +1419,11 @@ export class HiveManager {
       .sort((a, b) => (a.id < b.id ? -1 : 1));
     if (fresh.length === 0) return { block: false };
 
-    cursor.lastProcessed = fresh[fresh.length - 1].id;
-    this.atomicWriteJson(cursorPath, cursor);
+    // Crash-window contract: the cursor does NOT advance here. It moves only in
+    // ackInbox(), over ids observed in inbox/.done/ (agent-handled). A crash
+    // between this drain and the agent's .done move therefore resurfaces the
+    // same mail on the next boundary (at-least-once, the safe direction) —
+    // never silently marked processed.
     this.appendLog({ kind: 'drain', agentId, count: fresh.length });
 
     const lines = fresh.map((m) => `- [from ${m.from}, ${m.act}] ${m.subject}: ${m.body}`).join('\n');
@@ -1432,6 +1435,38 @@ export class HiveManager {
       `Open the files in ${join(dir, 'inbox')} for full detail, act on each, then move handled ones to ${join(dir, 'inbox', '.done')}. Reply via your outbox if a message requires it.`
     ].join('\n');
     return { block: true, reason };
+  }
+
+  /** Advance the inbox cursor over observed acknowledgements only: ids already
+   *  moved to inbox/.done/ by the agent. Returns acked + still-pending counts.
+   *  The ONLY writer of cursor.json — drainForStop deliberately never advances
+   *  it (see its crash-window contract above). Safe to call on every Stop.
+   *  Identity comes from filenames (the protocol says move, not rename — a
+   *  renamed file simply doesn't advance the cursor, the safe direction). */
+  ackInbox(agentId: string): { acked: number; pending: number } {
+    const dir = this.agentDir(agentId);
+    if (!existsSync(dir)) return { acked: 0, pending: 0 };
+    const cursorPath = join(dir, 'cursor.json');
+    const cursor = this.readJson<{ lastProcessed: string | null }>(cursorPath, { lastProcessed: null });
+    let doneIds: string[] = [];
+    try {
+      doneIds = readdirSync(join(dir, 'inbox', '.done'))
+        .filter((f) => f.endsWith('.json'))
+        .map((f) => f.slice(0, -'.json'.length))
+        .sort();
+    } catch { /* no .done yet — nothing acked */ }
+    const newly = doneIds.filter((id) => !cursor.lastProcessed || id > cursor.lastProcessed);
+    if (newly.length > 0) {
+      cursor.lastProcessed = newly[newly.length - 1];
+      try {
+        this.atomicWriteJson(cursorPath, cursor);
+      } catch { /* cursor write is best-effort; next ack retries */ }
+    }
+    let pending = 0;
+    try {
+      pending = this.inbox(agentId).filter((m) => !cursor.lastProcessed || m.id > cursor.lastProcessed).length;
+    } catch { /* unreadable inbox reads as empty */ }
+    return { acked: newly.length, pending };
   }
 
   // — agent-facing text —

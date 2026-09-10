@@ -5,15 +5,21 @@ P0 ship-blocker, P1 v1, P2 later. IDs stable (B-001…) for tracking.
 
 ## Coordination core (hive)
 
-### B-001 Stop-drain dead code (P0)
+### B-001 Stop-drain dead code (P0) — DONE (revised, see below)
 - **Evidence**: `drainForStop` defined, zero callers; hook `Stop` handler only
   notifies; docs/shims claim drain works.
 - **Root cause**: drain wired in spec, never connected; autonomy fell back to
   intervals silently.
-- **Fix**: connect drain to Stop gate; cursor advances only after successful
-  agent acknowledgement; crash between drain and ack resurfaces mail.
-- **Acceptance**: kill -9 agent mid-drain → mail redelivered exactly once on
-  next Stop; test with harness kill fixture.
+- **Fix (REVISED — disagreed with original)**: reconnecting the BLOCKING drain
+  would revert a deliberate upstream safety call (forced continuation at Stop
+  bypasses HITL and spends credits mid-question). Instead: cursor is now
+  ack-based — `ackInbox()` advances only over `.done`-observed ids (only writer
+  of cursor.json; `drainForStop` never advances it, crash resurfaces mail =
+  at-least-once, the safe direction); Stop handler acks + reports the pending
+  count in the toast so the renderer wake path carries content.
+- **Acceptance**: drain→crash→redrain returns same mail; ack moves cursor only
+  over handled ids; Stop toast carries pending count. ✅ (test/hive-drain-ack)
+- **Status**: done on `improve/india-ready`.
 
 ### B-002 Hop cap unreachable (P0)
 - **Evidence**: cap checked, never incremented anywhere; protocol omits field.

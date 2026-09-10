@@ -22,7 +22,9 @@ function harness(initialGoal = 'Ship the release safely.') {
     recordSession() {},
     isGod() { return false; },
     // Auth is orthogonal here; the stub passes it so goal logic is reachable.
-    checkHookToken() { return true; }
+    checkHookToken() { return true; },
+    // Cursor ack is orthogonal here; no .done traffic in these tests.
+    ackInbox() { return { acked: 0, pending: 0 }; }
   };
   const server = new HookServer(
     hive,

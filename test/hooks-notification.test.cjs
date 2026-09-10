@@ -87,6 +87,15 @@ test('Stop fires "finished — idle"', async (t) => {
   assert.equal(notifications[0].body, 'finished — idle');
 });
 
+test('Stop with pending mail reports the waiting count (wake path carries content)', async (t) => {
+  const { hive, fire } = await floor(t);
+  hive.send({ to: 'jim-1', act: 'request', subject: 'one', body: 'x' }, 'god-1');
+  hive.send({ to: 'jim-1', act: 'request', subject: 'two', body: 'y' }, 'god-1');
+  await fire({ hook_event_name: 'Stop' });
+  assert.equal(notifications.length, 1);
+  assert.equal(notifications[0].body, 'finished — idle (2 hive messages waiting)');
+});
+
 test('Stop with stop_hook_active does NOT re-notify', async (t) => {
   const { fire } = await floor(t);
   await fire({ hook_event_name: 'Stop', stop_hook_active: true });
@@ -108,7 +117,7 @@ test('notifications setting off suppresses the OS toast but the hook still resol
   await hive.ensureAgent({ id: 'jim-1', name: 'Jim', provider: 'claude', cwd: home });
   const server = new HookServer(hive, () => null, () => ({ notifications: false }), undefined, undefined);
   notifications.length = 0;
-  const res = await server.handle({ agent_id: 'jim-1', session_id: 's1', hook_event_name: 'Stop' });
+  const res = await server.handle({ agent_id: 'jim-1', session_id: 's1', hook_event_name: 'Stop', hook_token: hive.hookToken() });
   assert.equal(notifications.length, 0, 'notifications:false must suppress the OS toast');
   assert.deepEqual(res, {}, 'the hook itself still resolves normally');
 });

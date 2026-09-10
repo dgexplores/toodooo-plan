@@ -272,7 +272,11 @@ export class HookServer {
       // path bypassed terminal-draft/HITL safety and could spend credits while a
       // user was answering a question. Inbox files remain durable; the renderer
       // wakes the agent later through its guarded idle-only delivery path.
-      this.notify(agentId ?? 'Agent', 'finished — idle');
+      // What Stop DOES do: gc the cursor over observed (.done) acks and report
+      // the still-pending count, so the wake path carries content, not just "idle".
+      let pending = 0;
+      try { pending = this.hive.ackInbox(agentId).pending; } catch { /* best-effort */ }
+      this.notify(agentId ?? 'Agent', pending > 0 ? `finished — idle (${pending} hive message${pending === 1 ? '' : 's'} waiting)` : 'finished — idle');
       this.emit(agentId, event, p);
       return {};
     }
