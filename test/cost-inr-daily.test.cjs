@@ -79,6 +79,28 @@ test('spawn gate checks the daily cap (contract)', () => {
   assert.match(src, /running agents finish/i);
 });
 
+test('client tagging attributes ledger rows without rewriting history', async (t) => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'md-client-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  const hive = new HiveManager(() => home);
+  await hive.ensureAgent({ id: 'a', name: 'A', provider: 'claude', cwd: home });
+  const base = { agentId: 'a', sessionId: 's', ts: Date.now(), input: 1, output: 1, cacheRead: 0, cacheCreation: 0, model: 'm', usd: 2 };
+  hive.appendCostLedger({ ...base });
+  assert.equal(hive.setClientKey('a', 'acme').ok, true);
+  hive.appendCostLedger({ ...base, usd: 3 });
+  assert.equal(hive.setClientKey('ghost', 'x').ok, false);
+  assert.equal(hive.setClientKey('a', '   ').clientKey, undefined, 'empty clears');
+  const s = hive.spendByClient();
+  assert.equal(s.total, 5);
+  assert.equal(s.byClient.acme, 3, 'only post-tag rows attribute');
+  assert.equal(s.unattributed, 2, 'pre-tag rows stay unattributed');
+});
+
+test('fleet rows expose the client key', () => {
+  const src = readSrc('src/main/index.ts');
+  assert.match(src, /clientKey: a\.clientKey \?\? null/);
+});
+
 test('fleet rows carry dual currency (null when no rate)', () => {
   const src = readSrc('src/main/index.ts');
   assert.match(src, /usdInr: formatInr\(usd, readConfig\(\)\.fxUsdInr\)/);

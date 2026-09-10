@@ -1315,7 +1315,8 @@ function writeFleetSnapshot(): void {
           lastTool: spans.length ? spans[spans.length - 1].tool : null,
           lastActiveSecAgo: u ? Math.round((now - u.ts) / 1000) : null,
           inboxBacklog: hive.inboxBacklog(id),
-          onHold: !!a.onHold
+          onHold: !!a.onHold,
+          clientKey: a.clientKey ?? null
         };
       });
     hive.writeFleetSnapshot({ ts: now, agents });
@@ -3499,6 +3500,13 @@ ipcMain.handle('hive:repairCwd', (_evt, id: unknown, cwd: unknown) => {
   }
   return hive.repairCwd(id, cwd);
 });
+ipcMain.handle('hive:setClientKey', (_evt, id: unknown, key: unknown) => {
+  if (typeof id !== 'string' || typeof key !== 'string') {
+    return { ok: false, error: 'Invalid client-key request' };
+  }
+  return hive.setClientKey(id, key);
+});
+ipcMain.handle('cost:byClient', () => hive.spendByClient());
 ipcMain.handle('hive:setAgentHold', (_evt, id: unknown, hold: unknown) => {
   if (typeof id !== 'string' || typeof hold !== 'boolean') {
     return { ok: false, error: 'Invalid hold request' };

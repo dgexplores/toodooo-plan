@@ -763,6 +763,13 @@ const api = {
   /** Rebind an agent to a new project folder (e.g. renamed on disk). Validated main-side. */
   hiveRepairCwd: (id: string, cwd: string): Promise<{ ok: boolean; cwd?: string; error?: string }> =>
     ipcRenderer.invoke('hive:repairCwd', id, cwd),
+  /** Tag an agent with the paying client (empty clears). Ledger rows from now
+   *  on carry the key; history is never rewritten. */
+  hiveSetClientKey: (id: string, key: string): Promise<{ ok: boolean; clientKey?: string; error?: string }> =>
+    ipcRenderer.invoke('hive:setClientKey', id, key),
+  /** Per-client IST-day spend + total + unattributed. Powers owner digests. */
+  costByClient: (): Promise<{ byClient: Record<string, number>; unattributed: number; total: number }> =>
+    ipcRenderer.invoke('cost:byClient'),
   /** Put an agent on hold (the human has them 1:1) or take it off. Held agents
    *  keep running; Michael is told to stop routing work to them. */
   hiveSetAgentHold: (id: string, hold: boolean): Promise<{ ok: boolean; onHold?: boolean; error?: string }> =>

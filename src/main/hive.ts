@@ -138,6 +138,9 @@ export interface AgentMeta {
   /** Which CLI this agent runs on. Defaults to 'claude' when unset (legacy). */
   provider?: AgentProvider;
   role?: string;
+  /** Client key for cost attribution (agency: which client pays for this
+   *  agent's work). Free-form, unset = unattributed. Never affects routing. */
+  clientKey?: string;
   capabilities?: string[];
   cwd: string;
   isGod?: boolean;
@@ -1692,6 +1695,28 @@ export class HiveManager {
     return false;
   }
 
+  /** Tag an agent with the client paying for it. Free-form key, empty clears.
+   *  Feeds per-client ledger attribution (R-11); routing untouched. */
+  setClientKey(id: string, key: string): { ok: boolean; clientKey?: string; error?: string } {
+    const root = this.root();
+    if (!root) return { ok: false, error: 'hive disabled' };
+    const next = (key ?? '').trim().slice(0, 64);
+    try {
+      const reg = this.registry();
+      const agent = reg.agents[id];
+      if (!agent) return { ok: false, error: 'unknown agent' };
+      if (next) agent.clientKey = next;
+      else delete agent.clientKey;
+      agent.lastSeen = Date.now();
+      this.atomicWriteJson(join(root, 'registry.json'), reg);
+      this.appendLog({ kind: 'client-key', agentId: id, clientKey: next || null });
+      this.commit(`hive: client key ${id}`);
+      return { ok: true, clientKey: next || undefined };
+    } catch {
+      return { ok: false, error: 'could not set client key' };
+    }
+  }
+
   /** Inject a message directly (used by the orchestrator / UI / tests). */
   send(partial: Partial<HiveMessage>, from = 'system'): HiveMessage {
     const msg = this.normalize(partial, from);
@@ -2852,6 +2877,9 @@ export class HiveManager {
       cache_creation: sample.cacheCreation,
       model: sample.model,
       usd: sample.usd,
+      // Client attribution at write time (R-11): the agent's CURRENT key.
+      // Re-tagging an agent does not rewrite history — past rows keep theirs.
+      client_key: this.registry().agents[sample.agentId]?.clientKey ?? null,
       // Present only when default-priced: keeps old rows schema-clean while
       // letting the UI label guesses. Not read by the fold (usd-only).
       ...(sample.estimated ? { estimated: true } : {})
@@ -2864,25 +2892,35 @@ export class HiveManager {
    *  the ledger ever grows past comfortable read size, this is where a daily
    *  rollup cache goes (cost-ledger rotation is separately open). */
   todaySpendUsd(now = Date.now()): number {
+    return this.spendByClient(now).total;
+  }
+
+  /** Per-client IST-day spend + total + unattributed. Powers owner digests. */
+  spendByClient(now = Date.now()): { byClient: Record<string, number>; unattributed: number; total: number } {
+    const out = { byClient: {} as Record<string, number>, unattributed: 0, total: 0 };
     const root = this.root();
-    if (!root) return 0;
+    if (!root) return out;
     const start = istDayStart(now);
-    let total = 0;
     try {
       const text = readFileSync(join(root, 'cost-ledger.jsonl'), 'utf8');
       for (const line of text.split('\n')) {
         if (!line.trim()) continue;
         try {
-          const r = JSON.parse(line) as { ts?: unknown; usd?: unknown };
-          if (typeof r.ts === 'number' && r.ts >= start && typeof r.usd === 'number' && r.usd > 0) {
-            total += r.usd;
+          const r = JSON.parse(line) as { ts?: unknown; usd?: unknown; client_key?: unknown };
+          if (typeof r.ts !== 'number' || r.ts < start) continue;
+          if (typeof r.usd !== 'number' || r.usd <= 0) continue;
+          out.total += r.usd;
+          if (typeof r.client_key === 'string' && r.client_key) {
+            out.byClient[r.client_key] = (out.byClient[r.client_key] ?? 0) + r.usd;
+          } else {
+            out.unattributed += r.usd;
           }
         } catch { /* one bad row never breaks the sum */ }
       }
     } catch {
-      return 0;
+      // no ledger yet
     }
-    return total;
+    return out;
   }
 
   // — json + atomic io —
