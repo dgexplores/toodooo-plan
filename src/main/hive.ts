@@ -2875,7 +2875,11 @@ export class HiveManager {
     this.untrackCostLedger(root);
     this.untrackCodexHomes(root);
     for (let attempt = 0; attempt < 5; attempt++) {
-      this.clearStaleLock(root);
+      // Never delete index.lock/HEAD.lock here: our own git calls are fully
+      // synchronous (spawnSync + gc.autoDetach=false), so a lock older than a
+      // moment belongs to an EXTERNAL git process (operator or agent working
+      // the hive dir directly). Stealing it corrupts their index. Wait it out
+      // with backoff; give up loudly rather than break someone else's commit.
       const add = this.git(['add', '-A'], root);
       const commit = this.git(['commit', '-q', '-m', message], root);
       if (commit.ok) return;
@@ -2885,16 +2889,6 @@ export class HiveManager {
       return;
     }
     console.warn('[hive] commit gave up after 5 attempts');
-  }
-
-  private clearStaleLock(root: string): void {
-    const STALE_THRESHOLD_MS = 10_000;
-    try {
-      for (const lock of ['index.lock', 'HEAD.lock']) {
-        const path = join(root, '.git', lock);
-        if (existsSync(path) && Date.now() - statSync(path).mtimeMs > STALE_THRESHOLD_MS) rmSync(path);
-      }
-    } catch { /* noop */ }
   }
 }
 
