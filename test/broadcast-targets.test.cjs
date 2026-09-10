@@ -12,7 +12,8 @@ const roster = {
   // A worker on a hookless provider (`custom`): no hook bridge, no proxy.
   toby: {},
   prep: { isAssistant: true },
-  creed: { archived: true }
+  creed: { archived: true },
+  pam: { onHold: true }
 };
 
 test('a broadcast reaches every live agent except the sender', () => {
@@ -26,6 +27,11 @@ test('the send-only prep assistant is never a broadcast target', () => {
 
 test('an archived agent (closed PTY tab) is skipped', () => {
   assert.ok(!selectBroadcastTargets(roster, 'michael').includes('creed'));
+});
+
+test('an on-hold agent (1:1 with the human) is left alone by fan-out', () => {
+  assert.ok(!selectBroadcastTargets(roster, 'michael').includes('pam'));
+  assert.deepEqual(selectBroadcastTargets(roster, 'michael').sort(), ['dev1', 'toby']);
 });
 
 test('a hookless agent is included — direct mail already reaches it', () => {

@@ -1683,7 +1683,15 @@ export class HiveManager {
       // Intentional: god IS the human's proxy, so god→human is god speaking in
       // its own session — nothing to route. It is recorded in the message log
       // with an empty delivered list, never bounced, never dropped.
+      // NOTE: hold is deliberately NOT checked on the direct path — naming an
+      // agent explicitly overrides it. Hold governs fan-out (above) and god's
+      // dispatch judgment via the fleet flag, never transport.
       : [resolveTo(msg.to)].filter((t) => t !== msg.from);
+    if (msg.to === 'broadcast') {
+      const skipped = Object.keys(reg.agents).filter((id) =>
+        id !== msg.from && !reg.agents[id]?.isAssistant && !reg.agents[id]?.archived && reg.agents[id]?.onHold);
+      if (skipped.length > 0) this.appendLog({ kind: 'hold-skip', from: msg.from, id: msg.id, skipped });
+    }
     // Targets that actually took delivery. The log below reports these instead of
     // intent, so a bounced or dropped message can never read as delivered.
     const delivered: string[] = [];

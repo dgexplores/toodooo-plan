@@ -11,6 +11,9 @@ export interface BroadcastCandidate {
   isAssistant?: boolean;
   /** PTY tab closed; the record is retained but the agent is not live. */
   archived?: boolean;
+  /** On hold (1:1 with the human) — fan-out leaves it alone. Direct mail
+   *  still delivers: explicit addressing wins over hold. */
+  onHold?: boolean;
 }
 
 /**
@@ -18,6 +21,13 @@ export interface BroadcastCandidate {
  *
  * Excluded: the sender itself, the send-only prep assistant (direct mail to it
  * would rot unread), and archived agents (no live PTY).
+ *
+ * Also excluded: agents on hold (1:1 with the human — fan-out is opportunistic
+ * and must leave them alone). Direct mail to a held agent still delivers:
+ * naming an agent explicitly overrides hold; hold governs fan-out and god's
+ * dispatch judgment (via the fleet flag), never transport. Held-out broadcast
+ * mail is logged by the router (kind 'hold-skip'), not queued — a digest on
+ * unhold is future work, not silent loss.
  *
  * NOT excluded: providers without a hook/proxy bridge. Fan-out used to gate on
  * `canReceiveInbox`, which meant an agent on a hookless provider — `custom`,
@@ -43,6 +53,7 @@ export function selectBroadcastTargets(
     if (id === fromId) return false;
     if (agent.isAssistant) return false;
     if (agent.archived) return false;
+    if (agent.onHold) return false;
     return true;
   });
 }
