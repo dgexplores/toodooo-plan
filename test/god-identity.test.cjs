@@ -17,3 +17,14 @@ test('nothing persisted yet falls back to the default', () => {
   assert.equal(resolveGodName(''), DEFAULT_GOD_NAME);
   assert.equal(resolveGodName('   '), DEFAULT_GOD_NAME); // whitespace-only is not a real name
 });
+
+test('legacy default "Michael" migrates to the current default', () => {
+  assert.equal(resolveGodName('Michael'), DEFAULT_GOD_NAME);
+  assert.equal(resolveGodName('  Michael  '), DEFAULT_GOD_NAME);
+});
+
+test('near-miss custom names pass through untouched', () => {
+  assert.equal(resolveGodName('Michael Scott'), 'Michael Scott');
+  assert.equal(resolveGodName('Not Michael'), 'Not Michael');
+  assert.equal(resolveGodName('michael'), 'michael', 'case-sensitive: only the exact legacy default migrates');
+});

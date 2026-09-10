@@ -13,8 +13,18 @@ export const DEFAULT_GOD_NAME = 'Deepak';
  * back here (instead of hardcoding the default) is what keeps a rename from
  * reverting. Falls back to the default only when nothing has been persisted
  * yet — a fresh hive, or a registry not yet written this run.
+ *
+ * Rebrand migration: a persisted exact "Michael" was the PREVIOUS default, so
+ * it carries no deliberate intent — map it to the current default. Anyone
+ * attached re-renames in one click and that choice wins permanently. Deliberate
+ * over exact-match only: "Michael Scott" or "Not Michael" are real custom names
+ * and pass through untouched.
  */
+const LEGACY_DEFAULT_GOD_NAMES: readonly string[] = ['Michael'];
+
 export function resolveGodName(persistedName: string | undefined | null): string {
   const trimmed = persistedName?.trim();
-  return trimmed ? trimmed : DEFAULT_GOD_NAME;
+  if (!trimmed) return DEFAULT_GOD_NAME;
+  if ((LEGACY_DEFAULT_GOD_NAMES as readonly string[]).includes(trimmed)) return DEFAULT_GOD_NAME;
+  return trimmed;
 }
