@@ -50,6 +50,13 @@ export function priceFor(model: string | undefined | null): ModelPrice {
   return DEFAULT_PRICE;
 }
 
+/** True when the id matches a priced family. False means estimateCostUsd used
+ *  the Sonnet default — callers must label the figure estimated, never metered. */
+export function isKnownModelFamily(model: string | undefined | null): boolean {
+  const m = normalizeModel(model).toLowerCase();
+  return m.includes('opus') || m.includes('haiku') || m.includes('sonnet');
+}
+
 /** Token split used by the cost estimator (matches `AgentUsage` token fields). */
 export interface TokenSplit {
   inputTokens: number;

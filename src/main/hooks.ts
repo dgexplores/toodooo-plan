@@ -17,7 +17,7 @@ import type { HiveManager } from './hive';
 import type { HarnessConfig } from './config';
 import type { ControlRegistry } from './control';
 import type { CircuitBreaker } from './breaker';
-import { estimateCostUsd } from './pricing';
+import { estimateCostUsd, isKnownModelFamily } from './pricing';
 import { validateHookEvent } from '../shared/hookEvents';
 
 /** Maximum JSON payload bytes in one newline-delimited hook frame. */
@@ -229,6 +229,9 @@ export class HookServer {
           cacheRead,
           cacheCreation,
           model: p.model ?? '',
+          // Proxy-tier models are often local/unknown-family: Sonnet-default
+          // pricing is a guess here, so the row is marked estimated.
+          estimated: !isKnownModelFamily(p.model) || undefined,
           usd: estimateCostUsd(p.model, {
             inputTokens: input,
             outputTokens: output,

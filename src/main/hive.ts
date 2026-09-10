@@ -2851,7 +2851,10 @@ export class HiveManager {
       cache_read: sample.cacheRead,
       cache_creation: sample.cacheCreation,
       model: sample.model,
-      usd: sample.usd
+      usd: sample.usd,
+      // Present only when default-priced: keeps old rows schema-clean while
+      // letting the UI label guesses. Not read by the fold (usd-only).
+      ...(sample.estimated ? { estimated: true } : {})
     };
     try { appendFileSync(join(root, 'cost-ledger.jsonl'), JSON.stringify(row) + '\n', 'utf8'); } catch { /* noop */ }
   }

@@ -1,7 +1,7 @@
 import { closeSync, cpSync, existsSync, fstatSync, mkdirSync, openSync, readSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { estimateCostUsd, normalizeModel } from './pricing';
+import { estimateCostUsd, isKnownModelFamily, normalizeModel } from './pricing';
 
 /** Claude Code's project key: the absolute cwd with EVERY non-alphanumeric
  *  character turned into a dash — the leading slash and any dots included.
@@ -135,13 +135,17 @@ export interface AgentUsage {
   cacheReadTokens: number;
   cacheWriteTokens: number;
   estimatedCostUsd: number;
+  /** True when any record was priced with the Sonnet default (unknown family).
+   *  Propagates to the sample + ledger so the UI can label estimated figures
+   *  instead of presenting a default-priced guess as metered cost. */
+  defaultPriced: boolean;
   /** The most-recently-seen model id (normalized, e.g. `claude-opus-4-8`), or
    *  undefined if no priced record was found. Lets the UI label the row. */
   model?: string;
 }
 
 function zero(): AgentUsage {
-  return { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, estimatedCostUsd: 0 };
+  return { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, estimatedCostUsd: 0, defaultPriced: false };
 }
 
 export interface ReadUsageOptions {
@@ -236,6 +240,7 @@ function parseUsageLines(text: string, entry: FileUsageEntry): void {
     }
     for (const acc of targets) {
       if (model) acc.model = model;
+      if (!isKnownModelFamily(model)) acc.defaultPriced = true;
       acc.inputTokens += rIn;
       acc.outputTokens += rOut;
       acc.cacheWriteTokens += rCacheWrite;
@@ -327,6 +332,7 @@ export function readAgentUsage(cwd: string, opts: ReadUsageOptions = {}): AgentU
       usage.cacheWriteTokens += totals.cacheWriteTokens;
       usage.cacheReadTokens += totals.cacheReadTokens;
       usage.estimatedCostUsd += totals.estimatedCostUsd;
+      if (totals.defaultPriced) usage.defaultPriced = true;
       if (totals.model) lastModel = totals.model;
     }
     if (lastModel) usage.model = lastModel;

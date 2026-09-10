@@ -50,6 +50,9 @@ export interface AgentUsageSample {
   /** Claude-precomputed cost (live path) / transcript-fallback estimate (interim).
    *  Never recomputed by a consumer. */
   usd: number;
+  /** True when usd is a default-priced estimate rather than a metered figure
+   *  (unknown model family on an offline path). Consumers must label it. */
+  estimated?: boolean;
 }
 
 /** The seam both backends implement. */
@@ -96,7 +99,8 @@ export class StubUsageProvider implements UsageProvider {
       cacheRead: u.cacheReadTokens,
       cacheCreation: u.cacheWriteTokens,
       model: normalizeModel(info.model),
-      usd: u.estimatedCostUsd // interim fallback estimate; Oscar's provider supplies Claude-precomputed usd
+      usd: u.estimatedCostUsd, // interim fallback estimate; Oscar's provider supplies Claude-precomputed usd
+      estimated: u.defaultPriced || undefined
     };
   }
 }
