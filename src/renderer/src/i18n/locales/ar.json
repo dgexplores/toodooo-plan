@@ -154,7 +154,11 @@
     "terminalTip": "افتح تطبيق الطرفية في نظامك عند {{cwd}} — صدفة عادية داخل مجلد هذا الوكيل، منفصلة عن طرفيته الخاصة.",
     "openIde": "افتح بيئة التطوير",
     "ide": "بيئة التطوير",
-    "openTerminalAria": "افتح طرفية نظام في مجلد هذا الوكيل"
+    "openTerminalAria": "افتح طرفية نظام في مجلد هذا الوكيل",
+    "repairFolder": "Repair folder",
+    "repairBtn": "Repair",
+    "repaired": "Folder updated.",
+    "repairFailed": "Repair failed."
   },
   "settingsHero": {
     "sponsoredBy": "برعاية",
@@ -247,7 +251,12 @@
       "resetStartOver": "أعِد التعيين وابدأ من جديد",
       "arabicTerminal": "النص العربي / من اليمين إلى اليسار في الطرفيات",
       "arabicTerminalDesc": "يعرض الطرفيات بمحرّك النصوص في المتصفّح ليتّصل النص العربي ويُقرأ من اليمين إلى اليسار (لا يملك xterm دعم اتجاهين خاصًا به). الإيقاف يعني العارض الرسومي: أسرع، لكنه أعمى عن الاتجاه من اليمين إلى اليسار. يسري على الطرفيات المفتوحة والجديدة على حدّ سواء.",
-      "arabicTerminalFollowsLanguage": "يتبع حاليًا لغة التطبيق. بدّله من هنا لتجاوز ذلك في أي من الاتجاهين — ويبقى اختيارك حتى لو غيّرت اللغة مجددًا."
+      "arabicTerminalFollowsLanguage": "يتبع حاليًا لغة التطبيق. بدّله من هنا لتجاوز ذلك في أي من الاتجاهين — ويبقى اختيارك حتى لو غيّرت اللغة مجددًا.",
+      "privacyTitle": "Where your data goes",
+      "privacyBlurb": "Every network surface in the app, and what each is allowed to do. Pinned by CI — a new listener fails the build until it lands here.",
+      "privacyScope": "Scope",
+      "privacyAuth": "Gate",
+      "privacyPromises": "Promises"
     },
     "agentsModels": {
       "defaultModel": "النموذج الافتراضي للوكلاء",
@@ -281,7 +290,16 @@
       "hardStopDesc": "عند التجاوز، أنهِ الوكيل بدل تقييده فقط. الإيقاف = التوجيه أولًا (موصى به).",
       "killOnTrip": "أنهِه عند التجاوز",
       "steerFirst": "وجِّه أولًا",
-      "saved": "حُفِظ"
+      "saved": "حُفِظ",
+      "dailyCap": "daily spend cap (USD)",
+      "dailyCapPlaceholder": "e.g. 5",
+      "dailyCapHint": "IST day, ledger-measured. New spawns refuse past it; running agents finish.",
+      "fxRate": "USD→INR rate",
+      "fxPlaceholder": "e.g. 83.5",
+      "fxHint": "Manual rate for ₹ display. Unset = USD only.",
+      "cpuCap": "floor CPU cap (% of all cores)",
+      "cpuPlaceholder": "e.g. 400",
+      "cpuHint": "Refuses new spawns past it (POSIX only). Running agents finish."
     },
     "memory": {
       "semanticMemory": "الذاكرة الدلالية",
@@ -338,7 +356,24 @@
       "orgKeyDesc": "كيف تُخاطِب نسخةُ زميلك نسختَك.",
       "apiKey": "مفتاح API",
       "orgKeyPlaceholder": "الصق مفتاح مؤسستك",
-      "orgConfigOnly": "إعداد فقط في الوقت الحالي. خدمة مراسلة المؤسسة غير موجودة بعد، لذا لا يبدأ المفتاح هنا أي نقل — بل يُحفَظ ويُعرَض في تبويب المشغّلات وينتظر."
+      "orgConfigOnly": "إعداد فقط في الوقت الحالي. خدمة مراسلة المؤسسة غير موجودة بعد، لذا لا يبدأ المفتاح هنا أي نقل — بل يُحفَظ ويُعرَض في تبويب المشغّلات وينتظر.",
+      "secretPlaceholder": "minted at creation — copy it then",
+      "secretSet": "secret set — type to replace, or clear below",
+      "clearSecret": "clear",
+      "whatsapp": "WhatsApp",
+      "whatsappDesc": "Pipe WhatsApp messages straight into god's queue (Meta Cloud API, free tier). Start the server, paste the tunnel URL into your Meta app.",
+      "whatsappPhoneId": "Business phone_number_id",
+      "whatsappPort": "Port",
+      "whatsappAllowlist": "Sender allowlist (WA ids, comma-separated)",
+      "whatsappAllowlistPh": "919999999999, 918888888888 — empty allows nobody",
+      "whatsappVerifyToken": "Verify token",
+      "whatsappAppSecret": "App secret",
+      "whatsappPhoneToken": "Phone token (for replies)",
+      "whatsappSaveSecrets": "Save secrets",
+      "whatsappNothingTyped": "nothing typed — secrets unchanged",
+      "startedNoTunnel": "started, but tunnel unavailable",
+      "startFailed": "failed to start",
+      "cleared": "cleared"
     },
     "voice": {
       "freeFlow": "التدفّق الحر",
@@ -397,7 +432,8 @@
       "graph": "الرسم",
       "activity": "النشاط",
       "skills": "المهارات",
-      "workers": "العمّال"
+      "workers": "العمّال",
+      "spend": "spend"
     },
     "terminalFullscreen": "الطرفية مفتوحة بملء الشاشة. اضغط Esc لإعادتها.",
     "noTerminal": "{{name}} ليس لديه طرفية حيّة.",
@@ -472,7 +508,11 @@
     "openIssue": "مشكلة GitHub رقم {{num}}: {{title}}",
     "deliveryResumeAria": "استأنف التسليم التلقائي للأرضية كلها",
     "deliveryHoldAria": "احتجز التسليم التلقائي للأرضية كلها",
-    "openIdeAria": "افتح بيئة التطوير"
+    "openIdeAria": "افتح بيئة التطوير",
+    "restoreOne": "Restore",
+    "spendTitle": "SPEND — TODAY (IST)",
+    "spendToday": "today",
+    "spendUnattributed": "unattributed"
   },
   "addAgent": {
     "title": "إضافة وكيل",

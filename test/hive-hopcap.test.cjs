@@ -19,7 +19,7 @@ async function floor(t, { god = true } = {}) {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'md-hopcap-'));
   t.after(() => fs.rmSync(home, { recursive: true, force: true }));
   const hive = new HiveManager(() => home);
-  if (god) await hive.ensureAgent({ id: 'god-1', name: 'Michael', provider: 'claude', cwd: home, isGod: true });
+  if (god) await hive.ensureAgent({ id: 'god-1', name: 'Deepak', provider: 'claude', cwd: home, isGod: true });
   await hive.ensureAgent({ id: 'jim-1', name: 'Jim', provider: 'claude', cwd: home });
   await hive.ensureAgent({ id: 'pam-1', name: 'Pam', provider: 'claude', cwd: home });
   return { hive };

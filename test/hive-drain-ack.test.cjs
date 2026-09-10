@@ -21,7 +21,7 @@ async function floor(t) {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'md-drain-ack-'));
   t.after(() => fs.rmSync(home, { recursive: true, force: true }));
   const hive = new HiveManager(() => home);
-  await hive.ensureAgent({ id: 'god-1', name: 'Michael', provider: 'claude', cwd: home, isGod: true });
+  await hive.ensureAgent({ id: 'god-1', name: 'Deepak', provider: 'claude', cwd: home, isGod: true });
   await hive.ensureAgent({ id: 'jim-1', name: 'Jim', provider: 'claude', cwd: home });
   return { home, hive };
 }

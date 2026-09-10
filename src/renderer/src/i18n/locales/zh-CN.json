@@ -154,7 +154,11 @@
     "terminalTip": "在 {{cwd}} 中打开你的系统终端应用 —— 位于该智能体文件夹中的普通 shell，与该智能体自己的终端相互独立。",
     "openIde": "打开 IDE",
     "ide": "IDE",
-    "openTerminalAria": "在该智能体的文件夹中打开系统终端"
+    "openTerminalAria": "在该智能体的文件夹中打开系统终端",
+    "repairFolder": "Repair folder",
+    "repairBtn": "Repair",
+    "repaired": "Folder updated.",
+    "repairFailed": "Repair failed."
   },
   "settingsHero": {
     "sponsoredBy": "赞助方",
@@ -247,7 +251,12 @@
       "resetStartOver": "重置并重新开始",
       "arabicTerminal": "终端中的阿拉伯语 / RTL 文本",
       "arabicTerminalDesc": "用浏览器的文本引擎渲染终端，让阿拉伯语正确连写并从右向左阅读（xterm 自身没有双向文本支持）。关闭则使用 GPU 渲染器：更快，但无法处理从右向左的文本。对已打开和新开的终端同时生效。",
-      "arabicTerminalFollowsLanguage": "当前跟随应用语言。在此切换即可覆盖，两个方向都可以——你的选择会保留，即使之后再更改语言。"
+      "arabicTerminalFollowsLanguage": "当前跟随应用语言。在此切换即可覆盖，两个方向都可以——你的选择会保留，即使之后再更改语言。",
+      "privacyTitle": "Where your data goes",
+      "privacyBlurb": "Every network surface in the app, and what each is allowed to do. Pinned by CI — a new listener fails the build until it lands here.",
+      "privacyScope": "Scope",
+      "privacyAuth": "Gate",
+      "privacyPromises": "Promises"
     },
     "agentsModels": {
       "defaultModel": "默认智能体模型",
@@ -281,7 +290,16 @@
       "hardStopDesc": "触发时直接终止智能体，而不仅是约束。关闭 = 先引导（推荐）。",
       "killOnTrip": "触发即终止",
       "steerFirst": "先引导",
-      "saved": "已保存"
+      "saved": "已保存",
+      "dailyCap": "daily spend cap (USD)",
+      "dailyCapPlaceholder": "e.g. 5",
+      "dailyCapHint": "IST day, ledger-measured. New spawns refuse past it; running agents finish.",
+      "fxRate": "USD→INR rate",
+      "fxPlaceholder": "e.g. 83.5",
+      "fxHint": "Manual rate for ₹ display. Unset = USD only.",
+      "cpuCap": "floor CPU cap (% of all cores)",
+      "cpuPlaceholder": "e.g. 400",
+      "cpuHint": "Refuses new spawns past it (POSIX only). Running agents finish."
     },
     "memory": {
       "semanticMemory": "语义记忆",
@@ -338,7 +356,24 @@
       "orgKeyDesc": "队友的安装如何找到你的实例。",
       "apiKey": "API 密钥",
       "orgKeyPlaceholder": "粘贴你的组织密钥",
-      "orgConfigOnly": "目前仅限配置。组织消息服务尚不存在，所以这里的密钥不会启动任何传输——它会被保存、显示在触发器标签页中，然后等待。"
+      "orgConfigOnly": "目前仅限配置。组织消息服务尚不存在，所以这里的密钥不会启动任何传输——它会被保存、显示在触发器标签页中，然后等待。",
+      "secretPlaceholder": "minted at creation — copy it then",
+      "secretSet": "secret set — type to replace, or clear below",
+      "clearSecret": "clear",
+      "whatsapp": "WhatsApp",
+      "whatsappDesc": "Pipe WhatsApp messages straight into god's queue (Meta Cloud API, free tier). Start the server, paste the tunnel URL into your Meta app.",
+      "whatsappPhoneId": "Business phone_number_id",
+      "whatsappPort": "Port",
+      "whatsappAllowlist": "Sender allowlist (WA ids, comma-separated)",
+      "whatsappAllowlistPh": "919999999999, 918888888888 — empty allows nobody",
+      "whatsappVerifyToken": "Verify token",
+      "whatsappAppSecret": "App secret",
+      "whatsappPhoneToken": "Phone token (for replies)",
+      "whatsappSaveSecrets": "Save secrets",
+      "whatsappNothingTyped": "nothing typed — secrets unchanged",
+      "startedNoTunnel": "started, but tunnel unavailable",
+      "startFailed": "failed to start",
+      "cleared": "cleared"
     },
     "voice": {
       "freeFlow": "自由输入",
@@ -397,7 +432,8 @@
       "graph": "图谱",
       "activity": "动态",
       "skills": "技能",
-      "workers": "工人"
+      "workers": "工人",
+      "spend": "spend"
     },
     "terminalFullscreen": "终端已全屏打开。按 Esc 返回。",
     "noTerminal": "{{name}} 没有实时终端。",
@@ -472,7 +508,11 @@
     "openIssue": "GitHub Issue #{{num}}：{{title}}",
     "deliveryResumeAria": "恢复整个楼层的自动投递",
     "deliveryHoldAria": "暂停整个楼层的自动投递",
-    "openIdeAria": "打开 IDE"
+    "openIdeAria": "打开 IDE",
+    "restoreOne": "Restore",
+    "spendTitle": "SPEND — TODAY (IST)",
+    "spendToday": "today",
+    "spendUnattributed": "unattributed"
   },
   "addAgent": {
     "title": "添加智能体",

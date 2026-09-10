@@ -20,7 +20,7 @@ async function floor(t) {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'md-git-lock-'));
   t.after(() => fs.rmSync(home, { recursive: true, force: true }));
   const hive = new HiveManager(() => home);
-  await hive.ensureAgent({ id: 'god-1', name: 'Michael', provider: 'claude', cwd: home, isGod: true });
+  await hive.ensureAgent({ id: 'god-1', name: 'Deepak', provider: 'claude', cwd: home, isGod: true });
   await hive.ensureAgent({ id: 'jim-1', name: 'Jim', provider: 'claude', cwd: home });
   const gitDir = path.join(home, 'hive', '.git');
   assert.ok(fs.existsSync(gitDir), 'hive must be a git repo for lock tests');
