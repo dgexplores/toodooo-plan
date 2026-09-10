@@ -9,6 +9,7 @@
  * exit. Portable (no shell, no display). Non-zero exit + reason on failure.
  */
 const path = require('node:path');
+const fs = require('node:fs');
 
 const MARKER = 'TOODOOO-SMOKE-OK';
 const TIMEOUT_MS = 60_000;
@@ -16,6 +17,18 @@ const TIMEOUT_MS = 60_000;
 function fail(reason) {
   console.error(`smoke FAIL: ${reason}`);
   process.exit(1);
+}
+
+// Fresh checkouts lack the postinstall chmod (spawn-helper ships 644 in the
+// tarball — the exact class of issue this gate exists to catch). Best-effort,
+// cross-platform no-op where irrelevant.
+for (const plat of ['darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64']) {
+  try {
+    fs.chmodSync(
+      path.join(__dirname, '..', 'node_modules', 'node-pty', 'prebuilds', plat, 'spawn-helper'),
+      0o755
+    );
+  } catch { /* absent platform or read-only fs */ }
 }
 
 async function main() {

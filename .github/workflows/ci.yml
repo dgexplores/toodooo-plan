@@ -61,7 +61,14 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - name: Install dependencies
-        run: npm ci
+      # NOTE: --ignore-scripts is deliberate. The repo postinstall rebuilds
+      # natives for the ELECTRON ABI, which plain node cannot load — and on
+      # Windows runners the rebuild toolchain detection fails outright (node-gyp
+      # cannot find VS there; `npm ci` itself errors). The smoke probes the
+      # SHIPPED prebuilds under plain node instead, which is exactly what the
+      # packaged app must survive. The Electron-ABI rebuild path stays covered
+      # by the Build job + postinstall on dev machines.
+      - name: Install dependencies (no postinstall rebuild)
+        run: npm ci --ignore-scripts
       - name: PTY smoke (natives + round-trip + exit)
         run: npm run smoke
