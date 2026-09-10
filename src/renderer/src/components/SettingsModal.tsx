@@ -14,6 +14,7 @@ import {
 import { PixelPanel } from './PixelPanel';
 import { PixelButton } from './PixelButton';
 import { UpdatesSection } from './UpdatesSection';
+import { DataFlowPanel } from './DataFlowPanel';
 import { WhatsAppSettings } from './WhatsAppSettings';
 import { SettingsHeroCard } from './SettingsHeroCard';
 import { SetupPanel } from './SetupPanel';
@@ -2191,6 +2192,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                   {/* Danger — a red row at the bottom of General (was its own tab) */}
                   {activeSection === 'General' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      <DataFlowPanel />
                       <div style={{
                         fontFamily: 'var(--cth-font-display)', fontSize: 10, lineHeight: '14px',
                         color: '#6E1423'

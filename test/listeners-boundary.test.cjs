@@ -18,19 +18,15 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const loadTs = require('./load-ts.cjs');
 
 function src(p) {
   return fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
 }
 
-const EXPECTED = [
-  'src/main/hooks.ts',
-  'src/main/telemetry.ts',
-  'src/main/slack.ts',
-  'src/main/webhook.ts',
-  'src/main/hive.ts',
-  'src/main/integrationBroker.ts'
-];
+const { BOUNDARIES } = loadTs('src/shared/boundaries.ts');
+
+const EXPECTED = BOUNDARIES.map((b) => b.file);
 
 test('no listener outside the documented inventory', () => {
   const found = [];
@@ -49,6 +45,13 @@ test('no listener outside the documented inventory', () => {
     EXPECTED.sort(),
     `listener inventory changed — update the B-021 table above AND the auth story, then this list: extra=${found.filter((f) => !EXPECTED.includes(f))}`
   );
+});
+
+test('every boundary row names its auth story (no bare entries)', () => {
+  for (const b of BOUNDARIES) {
+    assert.ok(b.file && b.surface && b.scope && b.auth && b.egress, `incomplete row: ${b.file}`);
+    assert.ok(['uds-file', 'loopback', 'public-tunnel'].includes(b.scope), `bad scope: ${b.file}`);
+  }
 });
 
 test('UDS hook server requires the per-boot token (B-006 gate present)', () => {
