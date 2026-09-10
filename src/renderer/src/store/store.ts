@@ -475,6 +475,27 @@ function touchesDurableAgentField(patch: Partial<Agent>): boolean {
   return Object.keys(patch).some((k) => !VOLATILE_AGENT_FIELDS.has(k as keyof Agent));
 }
 
+/** Field-wise equality for updateAgent coalescing. Primitives by ===;
+ *  plain data objects (e.g. a rebuilt-but-identical blockReason) by JSON —
+ *  microseconds against the milliseconds a redundant roster clone + full
+ *  subscriber notify would cost. Key order is stable at every call site. */
+function patchesEqual(cur: Agent, patch: Partial<Agent>): boolean {
+  const c = cur as unknown as Record<string, unknown>;
+  return Object.keys(patch).every((k) => {
+    const a = c[k];
+    const b = (patch as unknown as Record<string, unknown>)[k];
+    if (a === b) return true;
+    if (a !== null && b !== null && typeof a === 'object' && typeof b === 'object') {
+      try {
+        return JSON.stringify(a) === JSON.stringify(b);
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
+}
+
 /** The persisted list for one slice: the shared file when it has a roster,
  *  otherwise this origin's localStorage — but only when that localStorage was
  *  written for this hive. Returns [] on anything malformed. */
@@ -699,6 +720,11 @@ export const useStore = create<State>((set, get) => ({
   select: (id) => set((s) => { persistAgents(s.agents, id); return { selectedId: id, ccTabRequest: null }; }),
   updateAgent: (id, patch) =>
     set((s) => {
+      const cur = s.agents.find(a => a.id === id);
+      // Coalesce no-op writes: bursty producers (pty parser per chunk,
+      // context polls) otherwise clone the roster + notify every subscriber
+      // per chunk. Unknown id falls through to the map (today's no-op shape).
+      if (cur && patchesEqual(cur, patch)) return s;
       const agents = s.agents.map(a => a.id === id ? { ...a, ...patch } : a);
       // Persist only when something DURABLE changed. `updateAgent` is also the
       // pty parser's per-chunk write (status/action/progress), so persisting
@@ -761,7 +787,13 @@ export const useStore = create<State>((set, get) => ({
       return { agents };
     }),
   pushFeed: (id, line) =>
-    set((s) => ({ feeds: { ...s.feeds, [id]: capTail([...(s.feeds[id] ?? []), line], FEED_MAX) } })),
+    set((s) => {
+      const cur = s.feeds[id] ?? [];
+      // TUI repaints re-emit identical tool lines per chunk — collapse
+      // consecutive duplicates at the source instead of growing the ring.
+      if (cur.length > 0 && cur[cur.length - 1] === line) return s;
+      return { feeds: { ...s.feeds, [id]: capTail([...cur, line], FEED_MAX) } };
+    }),
   addAgent: (agent) =>
     set((s) => {
       // Idempotent by id: a MAIN-initiated spawn broadcast (hive:agentSpawned, e.g.
