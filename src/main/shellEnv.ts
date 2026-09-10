@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { execFile, spawnSync } from 'node:child_process';
 
 // These helpers mirror the resolution logic in pty.ts. They exist separately so
 // headless child processes can launch `claude` with the same PATH the user's
@@ -15,6 +15,58 @@ let cachedPath: string | null = null;
  *  don't change mid-session. Only successful captures are cached, so a null
  *  (shell failed / fence missing) stays retryable. */
 const shellCapture = new Map<string, string>();
+
+/** Async twin of the capture above, for main-process callers that must not
+ *  freeze (every capture boots a full login shell — ~1s of BLOCKING spawnSync
+ *  otherwise; N probes on onboarding/restore froze all windows for seconds).
+ *  Same fence, same positive memo. Negatives memoize briefly (NEG_TTL_MS): a
+ *  probe storm for a missing CLI costs one shell per window instead of one per
+ *  probe, while a just-installed binary still appears promptly. */
+const NEG_TTL_MS = 10_000;
+const shellAsyncCache = new Map<string, { v: string | null; ts: number }>();
+
+export function captureFromLoginShellAsync(script: string): Promise<string | null> {
+  const hit = shellAsyncCache.get(script);
+  if (hit && (hit.v !== null || Date.now() - hit.ts < NEG_TTL_MS)) return Promise.resolve(hit.v);
+  const mark = '__MD_SHELL_FENCE__';
+  return new Promise((resolve) => {
+    execFile(
+      process.env.SHELL ?? '/bin/zsh',
+      ['-ilc', `printf %s ${mark}; ${script}; printf %s ${mark}`],
+      { encoding: 'utf8', timeout: 3000 },
+      (err, stdout) => {
+        let v: string | null = null;
+        if (!err) {
+          const out = stdout ?? '';
+          const start = out.indexOf(mark);
+          const end = out.lastIndexOf(mark);
+          if (start >= 0 && end > start) v = out.slice(start + mark.length, end);
+        }
+        shellAsyncCache.set(script, { v, ts: Date.now() });
+        resolve(v);
+      }
+    );
+  });
+}
+
+/** Fire-and-forget PATH prewarm for app boot: fills the userShellPathAsync
+ *  cache off the critical path so the first spawn never pays the shell cost. */
+export function prewarmUserShell(): void {
+  void userShellPathAsync().catch(() => { /* PATH fallback covers failure */ });
+}
+
+let cachedAsyncPath: string | null = null;
+
+export async function userShellPathAsync(): Promise<string> {
+  if (cachedAsyncPath !== null) return cachedAsyncPath;
+  if (process.platform === 'win32') {
+    cachedAsyncPath = process.env.PATH || '';
+    return cachedAsyncPath;
+  }
+  const shellPath = (await captureFromLoginShellAsync('printf %s "$PATH"'))?.trim();
+  cachedAsyncPath = shellPath && !shellPath.includes('\n') ? shellPath : process.env.PATH || '';
+  return cachedAsyncPath;
+}
 
 /** Run `script` in the user's INTERACTIVE login shell and return only what the
  *  script itself printed.

@@ -105,13 +105,13 @@ test('resolveCommand returns a non-plain name unchanged — it never reaches the
 
 test('pty.ts resolver validates before which/where', () => {
   const src = readSrc('src/main/pty.ts');
-  // The guard must sit in resolveCommandUncached and precede the spawnSync('where')
-  // and the captureFromLoginShell(`which …`) calls, and `where` must not run under
+  // The guard must sit in resolveCommandUncached and precede the async `where`
+  // and the `which` probe, and `where` must not run under
   // a shell (which would re-parse the argument).
   assert.match(src, /if \(!isSafeCommandName\(command\)\) return \{ path: command, found: false \};/);
   assert.doesNotMatch(src, /spawnSync\('where', \[command\], \{ encoding: 'utf8', timeout: 3000, shell: true \}\)/);
   const guardAt = src.indexOf('if (!isSafeCommandName(command)) return { path: command, found: false };');
-  const whichAt = src.indexOf('captureFromLoginShell(`which ${command}`)');
+  const whichAt = src.indexOf('captureFromLoginShellAsync(`which ${command}`)');
   assert.ok(guardAt > 0 && whichAt > guardAt, 'the guard must precede the `which` interpolation');
 });
 
@@ -121,6 +121,6 @@ test('index.ts validates the bin at the spawn-request intake', () => {
   // and it does so BEFORE isCommandAvailable(bin) (which itself calls the resolver).
   assert.match(src, /if \(!isSafeCommandName\(bin\) && !isAbsolute\(bin\)\) \{/);
   const guardAt = src.indexOf('if (!isSafeCommandName(bin) && !isAbsolute(bin)) {');
-  const availAt = src.indexOf('if (!ptyManager.isCommandAvailable(bin))');
+  const availAt = src.indexOf('await ptyManager.isCommandAvailable(bin))) { fail(');
   assert.ok(guardAt > 0 && availAt > guardAt, 'the guard must precede isCommandAvailable(bin)');
 });

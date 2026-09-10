@@ -35,7 +35,7 @@ test('a SIGILL death forwards the signal and the output that explains it', { ski
 
   // Print a recognisable banner, flush it, then kill ourselves with SIGILL —
   // the exact shape of the crash that motivated this change.
-  const res = mgr.spawn({
+  const res = await mgr.spawn({
     id: 'e2e-sigill',
     cwd: process.cwd(),
     command: '/bin/sh',
@@ -66,7 +66,7 @@ test('a clean exit reports no signal', { skip: !POSIX }, async () => {
   const mgr = new PtyManager();
   const done = waitForExit(mgr);
 
-  const res = mgr.spawn({
+  const res = await mgr.spawn({
     id: 'e2e-clean',
     cwd: process.cwd(),
     command: '/bin/sh',
@@ -83,7 +83,7 @@ test('a non-zero exit is reported as a code, not a signal', { skip: !POSIX }, as
   const mgr = new PtyManager();
   const done = waitForExit(mgr);
 
-  const res = mgr.spawn({
+  const res = await mgr.spawn({
     id: 'e2e-code',
     cwd: process.cwd(),
     command: '/bin/sh',

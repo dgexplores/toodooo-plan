@@ -2,11 +2,11 @@ import * as pty from 'node-pty';
 import type { WebContents } from 'electron';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { delimiter, join, win32 } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { ensureKilled, hardKillTree } from './procKill';
 import { expandTilde } from './fs';
 import { buildPtyEnv } from './ptyEnv';
-import { captureFromLoginShell, isSafeCommandName, userShellPath } from './shellEnv';
+import { captureFromLoginShellAsync, isSafeCommandName, userShellPathAsync } from './shellEnv';
 
 /** APPEND the hive's bundled-node dir (`<HIVE_ROOT>/bin/runtime`, which holds a
  *  shim literally named `node`) to a child's PATH.
@@ -389,28 +389,41 @@ export class PtyManager {
    *  Used PRE-SPAWN by the missing-CLI auto-install path: a bare `claude`/`codex`
    *  that resolveCommand can't locate would otherwise be spawned and die with
    *  "process exited (code 1)". Reuses the exact same `which`/`where` +
-   *  candidate-dir logic as spawn(), so detection and spawning never disagree. */
-  isCommandAvailable(command: string): boolean {
-    return this.resolveCommand(command).found;
+   *  candidate-dir logic as spawn(), so detection and spawning never disagree.
+   *  Async: the login-shell probe must never freeze the main process. */
+  async isCommandAvailable(command: string): Promise<boolean> {
+    return (await this.resolveCommand(command)).found;
   }
 
   /** The absolute path a bare command resolves to for THIS user, or null when it
    *  isn't installed. Same resolution + cache as spawn(), so a caller that probes
    *  a binary (e.g. `node --version`, to decide whether it is too old to keep)
    *  inspects exactly the executable an agent would have run. */
-  commandPath(command: string): string | null {
-    const r = this.resolveCommand(command);
+  async commandPath(command: string): Promise<string | null> {
+    const r = await this.resolveCommand(command);
     return r.found ? r.path : null;
   }
 
-  /** Session cache of SUCCESSFUL command resolutions. Each miss costs a full
+  /** Session cache of SUCCESSFUL command resolutions. Misses used to cost a full
    *  interactive-shell launch (`$SHELL -ilc which …` sources the user's whole
-   *  zshrc — nvm/asdf init is routinely ~1s) run synchronously on the main
-   *  process, and every agent spawn used to pay it TWICE (pre-check + spawn) —
-   *  a multi-second all-windows freeze per spawn, ×N on a team restore.
-   *  Negatives are deliberately NOT cached: the missing-CLI auto-install path
-   *  must see a just-installed binary on its re-check. */
+   *  zshrc — nvm/asdf init is routinely ~1s) run SYNCHRONOUSLY on the main
+   *  process: a multi-second all-windows freeze per spawn, ×N on a team restore
+   *  (upstream issue #446). Two fixes: (1) the probe is now async, so a miss
+   *  costs latency on one spawn, never a freeze; (2) negatives memoize briefly
+   *  (NEG_TTL_MS) so a probe storm for a missing CLI costs one shell per window.
+   *  Correctness is kept by bustNegative(): any spawn ENOENT re-probes
+   *  immediately, so a just-installed binary is never hidden by the TTL. */
   private readonly resolvedCommands = new Map<string, { path: string; found: boolean }>();
+  /** Negative resolutions with the instant they were taken (monotonic ms). */
+  private readonly negativeResolutions = new Map<string, number>();
+  private static readonly NEG_TTL_MS = 10_000;
+
+  /** Forget a cached miss so the next probe hits the shell immediately. Called
+   *  on spawn ENOENT — the world may have changed under the TTL. */
+  bustNegative(command: string): void {
+    this.negativeResolutions.delete(command);
+    this.resolvedCommands.delete(command);
+  }
 
   /** Resolve a bare command (e.g. 'claude') against the user's PATH +
    *  common install locations. Needed because Electron's spawn env on
@@ -418,18 +431,27 @@ export class PtyManager {
    *  best path AND whether an existing executable was actually located (`found`):
    *  when nothing is found, `path` falls back to the bare command (spawn would
    *  ENOENT) and `found` is false — the signal the missing-CLI path keys on. */
-  private resolveCommand(command: string): { path: string; found: boolean } {
+  private async resolveCommand(command: string): Promise<{ path: string; found: boolean }> {
     const cached = this.resolvedCommands.get(command);
     // Trust a positive hit only while the binary still exists (uninstall/update
     // between spawns must re-probe rather than hand out a dead path).
     if (cached && existsSync(cached.path)) return cached;
-    const res = this.resolveCommandUncached(command);
-    if (res.found) this.resolvedCommands.set(command, res);
-    else this.resolvedCommands.delete(command);
+    const negAt = this.negativeResolutions.get(command);
+    if (negAt !== undefined && Date.now() - negAt < PtyManager.NEG_TTL_MS) {
+      return { path: command, found: false };
+    }
+    const res = await this.resolveCommandUncached(command);
+    if (res.found) {
+      this.resolvedCommands.set(command, res);
+      this.negativeResolutions.delete(command);
+    } else {
+      this.resolvedCommands.delete(command);
+      this.negativeResolutions.set(command, Date.now());
+    }
     return res;
   }
 
-  private resolveCommandUncached(command: string): { path: string; found: boolean } {
+  private async resolveCommandUncached(command: string): Promise<{ path: string; found: boolean }> {
     // Already an absolute/relative path (Unix `/` or Windows `\`) — pass through;
     // `found` reflects whether that path actually exists on disk.
     if (command.includes('/') || command.includes('\\')) return { path: command, found: existsSync(command) };
@@ -448,8 +470,14 @@ export class PtyManager {
       try {
         // No `shell:true`: `command` is proven metacharacter-free above, and
         // running `where` directly keeps cmd.exe from re-parsing the argument.
-        const res = spawnSync('where', [command], { encoding: 'utf8', timeout: 3000 });
-        const lines = (res.stdout ?? '').trim().split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+        // Async: `where` is fast, but this runs per cache miss and must never
+        // freeze the main process alongside the login-shell probe.
+        const lines = await new Promise<string[]>((resolve) => {
+          execFile('where', [command], { encoding: 'utf8', timeout: 3000 }, (err, stdout) => {
+            if (err) return resolve([]);
+            resolve((stdout ?? '').trim().split(/\r?\n/).map((l) => l.trim()).filter(Boolean));
+          });
+        });
         const pathExts = (process.env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD')
           .split(';').map((e) => e.trim().toUpperCase()).filter(Boolean);
         const isExecutable = (p: string): boolean => {
@@ -478,7 +506,9 @@ export class PtyManager {
     }
     // macOS / Linux — `which` against an interactive shell so we pick up nvm/asdf/brew paths.
     // Fenced capture (shellEnv): rc-file chatter can't poison the which output.
-    const which = captureFromLoginShell(`which ${command}`);
+    // Async for the same reason as `where` above: onboarding probes many CLIs,
+    // and each sync shell cost ~1s of frozen windows (issue #446).
+    const which = await captureFromLoginShellAsync(`which ${command}`);
     if (which) {
       const path = which.trim().split('\n').map((l) => l.trim()).filter(Boolean).pop();
       if (path && existsSync(path)) return { path, found: true };
@@ -511,7 +541,7 @@ export class PtyManager {
    * not installed or itself not a real .exe) degrades to exactly today's cmd.exe
    * behaviour. Never throws.
    */
-  private resolveWindowsShimSpawn(resolved: string): { file: string; script: string | null } | null {
+  private async resolveWindowsShimSpawn(resolved: string): Promise<{ file: string; script: string | null } | null> {
     if (process.platform !== 'win32') return null;
     try {
       const lower = resolved.toLowerCase();
@@ -539,7 +569,7 @@ export class PtyManager {
         return { file: target.scriptPath, script: null };
       }
 
-      const interp = this.resolveCommand(target.interpreter);
+      const interp = await this.resolveCommand(target.interpreter);
       if (!interp.found) return null;
       // Must be a REAL executable: if `node` itself only resolves to a `.cmd`
       // (e.g. our own bundled-runtime shim appended to PATH), spawning it directly
@@ -553,7 +583,7 @@ export class PtyManager {
     }
   }
 
-  spawn(opts: SpawnOptions, owner: WebContents | null = null): { ok: boolean; error?: string } {
+  async spawn(opts: SpawnOptions, owner: WebContents | null = null): Promise<{ ok: boolean; error?: string }> {
     if (this.sessions.has(opts.id)) {
       return { ok: false, error: `pty already exists for id ${opts.id}` };
     }
@@ -564,14 +594,13 @@ export class PtyManager {
     if (!existsSync(opts.cwd)) {
       return { ok: false, error: `cwd does not exist: ${opts.cwd}` };
     }
-    const resolved = this.resolveCommand(opts.command).path;
+    const resolved = (await this.resolveCommand(opts.command)).path;
     try {
-      // Build a user-shell PATH so child can resolve subprocess deps. Cached
-      // for the session (shellEnv.userShellPath, fenced against rc-file noise) —
-      // the interactive-shell launch it replaces cost ~1s of main-thread freeze
-      // on EVERY spawn.
+      // Build a user-shell PATH so child can resolve subprocess deps. Session-
+      // cached and prewarmed at boot (shellEnv); the interactive-shell launch
+      // it replaces cost ~1s of main-thread freeze on EVERY spawn.
       const userPath = withHiveRuntimeFallback(
-        process.platform === 'win32' ? (process.env.PATH || '') : userShellPath(),
+        process.platform === 'win32' ? (process.env.PATH || '') : await userShellPathAsync(),
         opts.env?.HIVE_ROOT
       );
 
@@ -590,7 +619,7 @@ export class PtyManager {
       // macOS/Linux and every undecodable Windows target keep today's behaviour.
       // Skipped entirely for a shellScript spawn, which never executes `resolved`.
       const shimSpawn = needsCmd && typeof opts.shellScript !== 'string'
-        ? this.resolveWindowsShimSpawn(resolved)
+        ? await this.resolveWindowsShimSpawn(resolved)
         : null;
       let file: string;
       let spawnArgs: string[] | string;
@@ -735,7 +764,12 @@ export class PtyManager {
 
       return { ok: true };
     } catch (e) {
-      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+      // A just-installed binary can still be hiding behind a negative TTL entry
+      // (or a positive entry whose binary vanished): bust the cache so the very
+      // next probe — the auto-install re-check — hits the shell immediately.
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/ENOENT/i.test(msg)) this.bustNegative(opts.command);
+      return { ok: false, error: msg };
     }
   }
 

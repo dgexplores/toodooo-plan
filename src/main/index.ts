@@ -10,7 +10,7 @@ import { join, resolve, sep, basename, dirname, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
 import { request as httpsRequest } from 'node:https';
 import { PtyManager, type SpawnOptions } from './pty';
-import { resolveCommand as resolveCliCommand, isSafeCommandName } from './shellEnv';
+import { resolveCommand as resolveCliCommand, isSafeCommandName, prewarmUserShell } from './shellEnv';
 import { initAutoUpdater, abortPendingRestart } from './updater';
 import { RealtimeFloorWatcher } from './realtimeFloorWatcher';
 import {
@@ -2645,7 +2645,7 @@ async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebConten
   // isn't archived and no worktree is torn down) before the relaunch takes over.
   {
     const bin = opts.command.trim().split(/\s+/)[0] || opts.command;
-    if (bin && !opts.noAutoInstall && !ptyManager.isCommandAvailable(bin)) {
+    if (bin && !opts.noAutoInstall && !(await ptyManager.isCommandAvailable(bin))) {
       // The installer commands are `npm install -g …`. Probe for npm the same way
       // we probe for the engine CLI, so a no-Node machine gets the node-free rung
       // (or an honest manual hint) instead of watching `npm: not found` scroll by.
@@ -2653,14 +2653,14 @@ async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebConten
       // (2026-08-07) is "their Node newer than ours → leave it alone; absent or
       // older → install the latest stable for them".
       const npmAvailable =
-        ptyManager.isCommandAvailable('npm') &&
-        nodeIsUsable(detectNodeVersion(ptyManager.commandPath('node')));
+        (await ptyManager.isCommandAvailable('npm')) &&
+        nodeIsUsable(detectNodeVersion(await ptyManager.commandPath('node')));
       // Only reach the network when we actually need to (npm missing/too old);
       // resolveNodeInstaller is timeout-bounded and returns null offline, which
       // simply drops the ladder to the native/manual rung.
       const nodeInstaller = npmAvailable ? null : await resolveNodeInstaller();
       const rung = chooseInstallRung(installInfoForProvider(provider), npmAvailable, nodeInstaller);
-      const res = ptyManager.spawn(
+      const res = await ptyManager.spawn(
         {
           id: opts.id,
           cwd: opts.cwd,
@@ -2999,7 +2999,7 @@ async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebConten
   if (provider === 'codex' && opts.hive?.id) {
     await enableCodexRemoteForSpawn(opts, opts.hive.id);
   }
-  const res = ptyManager.spawn(opts, owner);
+  const res = await ptyManager.spawn(opts, owner);
   if (res.ok) analytics.track('agent_spawned', { provider });
   else analytics.track('agent_spawn_failed', { provider, reason: spawnFailReason(res.error) });
   syncKeepAwake(); // arm the power-save blocker while ≥1 agent PTY is alive (#18)
@@ -4717,7 +4717,7 @@ async function processSpawnRequest(filePath: string): Promise<void> {
   }
   // Missing-CLI → FAIL FAST. A headless worker has no human to watch an installer,
   // so we never run the cc49e1e install banner here — we reject and tell god.
-  if (!ptyManager.isCommandAvailable(bin)) { fail(`engine CLI "${bin}" is not installed`); return; }
+  if (!(await ptyManager.isCommandAvailable(bin))) { fail(`engine CLI "${bin}" is not installed`); return; }
 
   const isolate = raw.isolate !== false; // default true
   // Base branch the worktree will be cut from (for the ahead-of-base safety check).
@@ -5311,6 +5311,9 @@ app.whenReady().then(() => {
   // Guarded: a DB failure (e.g. a bad native build) must degrade to defaults,
   // never block app startup.
   try { persist.open(); } catch (e) { console.error('[db] open failed:', e); }
+  // Warm the login-shell PATH cache off the critical path: the first spawn
+  // must never pay the ~1s interactive-shell cost on the main thread (B-011).
+  prewarmUserShell();
   // The registries constructed above loaded best-effort (store was closed);
   // re-hydrate now that it is open so pauses, halts, gates, steers and breaker
   // levels/counters resume across restarts instead of resetting.
