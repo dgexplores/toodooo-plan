@@ -221,14 +221,22 @@ export function App() {
   // Reconcile restored agents against the PTYs still alive in the main process.
   // After a renderer reload (e.g. the laptop slept and Vite reloaded the page),
   // this keeps agents whose process survived and drops any that truly died.
+  // The 15s re-run is the roster⇔command sync: a regular agent whose process
+  // exits sends no archive broadcast (only workers do), so without this its
+  // member card would read live forever and take task assignments. The sweep
+  // only prunes dead PTYs to restorable — order and live cards untouched.
   useEffect(() => {
     if (!config?.onboardingComplete) return;
     let cancelled = false;
-    window.cth.listPtys().then((list) => {
-      if (cancelled) return;
-      useStore.getState().reconcileWithLivePtys(list.map((p) => p.id));
-    }).catch(() => { /* ignore — keep restored agents as-is */ });
-    return () => { cancelled = true; };
+    const sync = () => {
+      window.cth.listPtys().then((list) => {
+        if (cancelled) return;
+        useStore.getState().reconcileWithLivePtys(list.map((p) => p.id));
+      }).catch(() => { /* ignore — keep restored agents as-is */ });
+    };
+    sync();
+    const t = setInterval(sync, 15_000);
+    return () => { cancelled = true; clearInterval(t); };
   }, [config?.onboardingComplete]);
 
   // Re-apply the persisted focus-mode preference as the roster fills in.

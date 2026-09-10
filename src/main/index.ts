@@ -2614,7 +2614,7 @@ ipcMain.handle('pty:spawn', async (evt, opts: AgentSpawnOptions) => {
  *  it can ALSO be invoked by the god-triggered ephemeral-worker watcher (which has
  *  no renderer `evt`). `owner` is the window that should receive this PTY's output
  *  (null → the primary window). Behavior-identical to the prior inline handler. */
-async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebContents | null): Promise<{ ok: boolean; error?: string; cwd?: string; worktreePath?: string; resumeNotFound?: boolean; resumed?: boolean; seedPrompt?: string }> {
+async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebContents | null): Promise<{ ok: boolean; error?: string; cwd?: string; worktreePath?: string; resumeNotFound?: boolean; resumed?: boolean; seedPrompt?: string; pendingInstall?: boolean }> {
   // ── cwd INGESTION — expand `~` exactly once, here ───────────────────────────
   // This is the single door every agent spawn comes through (`pty:spawn` IPC and
   // the god-triggered ephemeral-worker watcher), so it is where a user-typed
@@ -2734,7 +2734,11 @@ async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebConten
         analytics.track('agent_spawn_failed', { provider, reason: spawnFailReason(res.error) });
       }
       syncKeepAwake();
-      return res;
+      // The running PTY is the ENGINE INSTALLER, not the agent: flag it so the
+      // renderer cards an honest "installing engine…" state (assignable nowhere)
+      // instead of a live member. The exit handler relaunches the real spawn in
+      // place; terminalPool clears the flag on `pty:relaunch`.
+      return { ...res, ...(res.ok ? { pendingInstall: true } : {}) };
     }
   }
   // Git isolation: when requested and the cwd is a real repo, give this agent
@@ -3040,7 +3044,16 @@ async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebConten
   }
   const res = await ptyManager.spawn(opts, owner);
   if (res.ok) analytics.track('agent_spawned', { provider });
-  else analytics.track('agent_spawn_failed', { provider, reason: spawnFailReason(res.error) });
+  else {
+    analytics.track('agent_spawn_failed', { provider, reason: spawnFailReason(res.error) });
+    // The ptyToAgent + watchdog entries were staged BEFORE the spawn above: a
+    // failed spawn must not leave them behind, or a later teardownPty for this
+    // id would archive a never-live agent (ghost member / ghost restore).
+    if (opts.hive?.id) {
+      ptyToAgent.delete(opts.id);
+      try { workerWake.forget(opts.hive.id, opts.id); } catch { /* best-effort */ }
+    }
+  }
   // Spawn warnings (today: Windows cmd.exe fallback) must reach the operator,
   // not just main-process stdout: the activity log is the surface that exists.
   if (res.ok && res.warnings?.length) {
@@ -4667,7 +4680,8 @@ registerRealtimeActionIpc({
           cwd: res.worktreePath ?? o.cwd,
           command: o.command,
           role: o.hive?.role,
-          worktreePath: res.worktreePath
+          worktreePath: res.worktreePath,
+          pendingInstall: res.pendingInstall ?? false
         });
       } catch { /* window torn down */ }
     }
@@ -4927,7 +4941,7 @@ async function processSpawnRequest(filePath: string): Promise<void> {
     hive: meta, isolate, provider: raw.provider, env: brokerEnv
   };
 
-  let res: { ok: boolean; error?: string; worktreePath?: string };
+  let res: { ok: boolean; error?: string; worktreePath?: string; pendingInstall?: boolean };
   try {
     res = await spawnAgentCore(spawnOpts, liveWebContents());
   } catch (e) {
@@ -4952,6 +4966,7 @@ async function processSpawnRequest(filePath: string): Promise<void> {
       command: launch.command,
       role: meta.role,
       worktreePath: res.worktreePath,
+      pendingInstall: res.pendingInstall ?? false,
       character: typeof raw.character === 'string' ? raw.character : undefined,
       accent: typeof raw.accent === 'string' ? raw.accent : undefined
     });

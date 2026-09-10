@@ -461,7 +461,12 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
       cwd: spawnedCwd,
       goal: goal.trim() || undefined,
       status: 'idle',
-      action: resuming && spawnRes.resumeNotFound ? 'session not found — fresh start' : 'starting up',
+      // An engine install runs in this PTY first (pendingInstall): the member
+      // card is honest about it so tasks aren't assigned to a half-born agent.
+      // terminalPool flips this to 'starting up' on `pty:relaunch`.
+      action: spawnRes.pendingInstall
+        ? 'installing engine… — real agent auto-starts on success'
+        : (resuming && spawnRes.resumeNotFound ? 'session not found — fresh start' : 'starting up'),
       progress: 0,
       currentStation: 'desk',
       ptyId,

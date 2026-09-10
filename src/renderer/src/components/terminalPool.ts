@@ -216,6 +216,13 @@ export function acquireTerminal(ptyId: string, theme?: ThemeMap, fontSize = 14):
   entry.unsub.push(window.cth.onPtyRelaunch(ptyId, () => {
     entry.exited = false;
     try { term.reset(); } catch { /* not yet open */ }
+    // The engine install finished and the real agent took over this PTY:
+    // drop the 'installing engine…' card state so the floor reads live.
+    try {
+      const st = storeApi?.getState();
+      const a = st?.agents.find((x) => x.ptyId === ptyId);
+      if (a) storeApi?.getState().updateAgent(a.id, { action: 'starting up' });
+    } catch { /* store unavailable — card keeps its text */ }
   }));
 
   // ── Copy / paste ──────────────────────────────────────────────────────────
@@ -944,8 +951,9 @@ function resolvePathCandidate(ptyId: string, raw: string): string | null {
 // pure automation helpers that share this file's import graph.
 interface MdStoreShape {
   getState: () => {
-    agents: Array<{ ptyId?: string; cwd: string }>;
+    agents: Array<{ id: string; ptyId?: string; cwd: string }>;
     openFileInIde: (absPath: string) => void;
+    updateAgent: (id: string, patch: Record<string, unknown>) => void;
   };
 }
 let storeApi: MdStoreShape | null = null;

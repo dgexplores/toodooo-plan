@@ -1040,7 +1040,7 @@ export function useHive(config: HarnessConfig | null): void {
         tmuxTarget: '',
         cwd: rec.cwd,
         status: 'idle',
-        action: 'starting up',
+        action: rec.pendingInstall ? 'installing engine… — real agent auto-starts on success' : 'starting up',
         progress: 0,
         currentStation: 'desk',
         ptyId: rec.id,

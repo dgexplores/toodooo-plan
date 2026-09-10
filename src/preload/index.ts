@@ -586,7 +586,7 @@ const api = {
   // ─── PTY ─────────────────────────────────────────────────────────────────
   /** `cwd` in the result is the TILDE-EXPANDED absolute path main actually spawned
    *  into — the renderer stores that, not the raw `~/…` the user typed. */
-  spawnPty: (opts: SpawnPtyOptions): Promise<{ ok: boolean; error?: string; cwd?: string; worktreePath?: string; resumeNotFound?: boolean; resumed?: boolean; seedPrompt?: string; warnings?: string[] }> =>
+  spawnPty: (opts: SpawnPtyOptions): Promise<{ ok: boolean; error?: string; cwd?: string; worktreePath?: string; resumeNotFound?: boolean; resumed?: boolean; seedPrompt?: string; warnings?: string[]; pendingInstall?: boolean }> =>
     ipcRenderer.invoke('pty:spawn', opts),
   writePty: (id: string, data: string): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke('pty:write', id, data),
@@ -918,7 +918,7 @@ const api = {
     cb: (rec: {
       id: string; name: string; provider?: string; cwd: string;
       command?: string; role?: string; worktreePath?: string;
-      character?: string; accent?: string;
+      character?: string; accent?: string; pendingInstall?: boolean;
     }) => void
   ): (() => void) => {
     const listener = (_e: IpcRendererEvent, payload: Parameters<typeof cb>[0]) => cb(payload);
