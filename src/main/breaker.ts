@@ -431,38 +431,31 @@ export class CircuitBreaker {
         if (velocity > cfg.tokenVelocityPerMin) {
           return { tripping: true, reason: `token velocity ${Math.round(velocity)}/min > ${cfg.tokenVelocityPerMin}/min` };
         }
-        // (c) no-progress: burning output tokens while not coordinating. A recent
-        // DISTINCT tool call counts as progress too — background workflows and
-        // interactive sessions do real work that never touches the hive files
-        // (a single-call loop never refreshes that clock, and the loop/velocity
-        // arms above still backstop). A recent HUMAN PROMPT is the third leg
-        // (#376): a live conversation is prose in, prose out — neither hive
-        // files nor tool spans — and steering into it delivers a breaker
-        // message while the operator is typing. Same window as the other legs;
-        // a runaway loop is one prompt then many tool calls, so this clock
-        // goes stale exactly when it should. Debounced: fires only after
-        // NO_PROGRESS_BEATS consecutive beats, so a one-beat blip never steers.
-        const toolActive = nowMs - s.lastDistinctToolAt < PROGRESS_TOOL_WINDOW_MS;
-        // A recently-changed working directory is progress too. The question
-        // this arm asks is "is this agent doing anything"; until now it asked
-        // "is this agent COORDINATING". The paths behind `progressing` are the
-        // inbox, the outbox and memory.md - every one of them messaging or
-        // memory, none of them where work lands. An agent that edits, builds
-        // and commits touches none of them and reads as wedged. Same window as
-        // the tool clock, because it answers the same question over the same
-        // span of time.
-        const workActive = typeof input.lastWorkAt === 'number' && input.lastWorkAt > 0
-          && nowMs - input.lastWorkAt < PROGRESS_TOOL_WINDOW_MS;
-        // #425: a live human conversation is progress too, on the same window.
-        const humanActive = nowMs - s.lastUserPromptAt < PROGRESS_TOOL_WINDOW_MS;
-        if (!input.progressing && !toolActive && !workActive && !humanActive) {
-          s.noProgressBeats += 1;
-          if (s.noProgressBeats >= NO_PROGRESS_BEATS) {
-            return { tripping: true, reason: 'no-progress: generating tokens without coordinating (stale log/files)' };
-          }
-        } else {
-          s.noProgressBeats = 0;
+      }
+      // (c) no-progress: burning output tokens while not coordinating. Evaluated
+      // independently of the velocity gate above — a wedged agent has FLAT
+      // output (dOut == 0), which is exactly when this arm must run; nesting it
+      // inside the growth check meant it slept precisely when needed.
+      const toolActive = nowMs - s.lastDistinctToolAt < PROGRESS_TOOL_WINDOW_MS;
+      // A recently-changed working directory is progress too. The question
+      // this arm asks is "is this agent doing anything"; until now it asked
+      // "is this agent COORDINATING". The paths behind `progressing` are the
+      // inbox, the outbox and memory.md - every one of them messaging or
+      // memory, none of them where work lands. An agent that edits, builds
+      // and commits touches none of them and reads as wedged. Same window as
+      // the tool clock, because it answers the same question over the same
+      // span of time.
+      const workActive = typeof input.lastWorkAt === 'number' && input.lastWorkAt > 0
+        && nowMs - input.lastWorkAt < PROGRESS_TOOL_WINDOW_MS;
+      // #425: a live human conversation is progress too, on the same window.
+      const humanActive = nowMs - s.lastUserPromptAt < PROGRESS_TOOL_WINDOW_MS;
+      if (!input.progressing && !toolActive && !workActive && !humanActive) {
+        s.noProgressBeats += 1;
+        if (s.noProgressBeats >= NO_PROGRESS_BEATS) {
+          return { tripping: true, reason: 'no-progress: generating tokens without coordinating (stale log/files)' };
         }
+      } else {
+        s.noProgressBeats = 0;
       }
     }
     return { tripping: false, reason: '' };
