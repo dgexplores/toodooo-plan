@@ -143,10 +143,10 @@ P0 ship-blocker, P1 v1, P2 later. IDs stable (B-001…) for tracking.
 - **Evidence**: restart resets, unknown models default Sonnet, silent zeros,
   co-located cwd double counts.
 - **Fix**: ledger-first accounting (append-only, never recomputed from
-  memory); unknown model blocks spend until priced (fail-closed with message);
+  memory); unknown-model figures are LABELED estimated end-to-end instead (R-12 decision: blocking would kill local models) —
   per-client attribution key on every record; user-visible "estimated" label
   wherever provider API didn't confirm.
-- **Acceptance**: kill-restart ledger continuity test; unknown-model blocks test.
+- **Acceptance**: kill-restart ledger continuity test; unknown-model labels test (cost-estimated).
 
 ## Security & privacy
 

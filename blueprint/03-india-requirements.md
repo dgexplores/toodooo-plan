@@ -30,7 +30,11 @@ acceptance line; nothing here is aspirational filler.
   before each billed action where provider allows).
 - **R-11** Per-client cost attribution on every ledger record; weekly digest
   ( Scheduled mission default: Monday 9am IST summary to owner).
-- **R-12** Unknown/uncosted model blocks spend with plain-language message.
+- **R-12** ~~Unknown/uncosted model blocks spend~~ → DECIDED (opposite): label, don't block.
+  Blocking would break local/open models (the free path this market needs) and
+  strand proxy-tier agents. Shipped instead: every default-priced figure carries
+  `estimated` from record → bucket → sample → ledger row (B-018), metered rows
+  stay schema-clean, UI labels guesses. Revisit only with evidence of real harm.
 
 ## 4. Hardware & network reality
 - **R-13** Budgets: idle shell < 250MB; 5-agent floor usable on 8GB RAM;

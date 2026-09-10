@@ -58,7 +58,7 @@ hive/  (git repo, main is SOLE writer — enforced: .gitignore + lock + docs)
 
 ## 6. Cost (fixes B-018)
 - Ledger-first: every spend event appended; UI reads ledger, never recomputes.
-- Unknown model = spend blocked with message (fail-closed).
+- Unknown model = labeled estimated end-to-end (R-12: blocking rejected — it would kill local/open models).
 - Per-client key on records; hard caps with kill-switch; all estimates labeled.
 
 ## 7. Chat (WhatsApp-first)
