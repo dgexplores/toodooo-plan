@@ -400,8 +400,14 @@ export function verify(args: {
 }
 
 /** Pull `{condensed, hoist}` out of `claude -p --output-format json` output.
- *  Two layers: the CLI envelope `{result: "<text>"}`, then the model's strict
- *  JSON (tolerating an accidental ```json fence). Returns null on any failure. */
+ *  Layered recovery (issue #459: ~80% of condenses aborted because the payload
+ *  must survive JSON string escaping, which models routinely break):
+ *  1. CLI envelope `{result|text: "<model text>"}` unwrapped when present;
+ *  2. accidental ```json fences stripped;
+ *  3. balanced-brace scan isolates the object from leading/trailing prose;
+ *  4. repair pass escapes raw control chars inside strings and drops trailing
+ *     commas — the two failure shapes models actually produce.
+ *  Returns null on any failure (caller aborts, original file untouched). */
 export function parseSummary(stdout: string): { condensed: string; hoist: string[] } | null {
   const raw = stdout.trim();
   if (!raw) return null;
@@ -412,12 +418,86 @@ export function parseSummary(stdout: string): { condensed: string; hoist: string
     else if (typeof env.text === 'string') inner = env.text;
   } catch { /* not the CLI envelope — treat stdout itself as the model output */ }
   inner = inner.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
-  try {
-    const obj = JSON.parse(inner) as { condensed?: unknown; hoist?: unknown };
-    if (typeof obj.condensed !== 'string' || !obj.condensed.trim()) return null;
-    const hoist = Array.isArray(obj.hoist) ? obj.hoist.filter((x): x is string => typeof x === 'string') : [];
-    return { condensed: obj.condensed, hoist };
-  } catch { return null; }
+  const shaped = (text: string): { condensed: string; hoist: string[] } | null => {
+    try {
+      const obj = JSON.parse(text) as { condensed?: unknown; hoist?: unknown };
+      if (typeof obj.condensed !== 'string' || !obj.condensed.trim()) return null;
+      const hoist = Array.isArray(obj.hoist) ? obj.hoist.filter((x): x is string => typeof x === 'string') : [];
+      return { condensed: obj.condensed, hoist };
+    } catch {
+      return null;
+    }
+  };
+  return shaped(inner)
+    ?? shaped(extractBalancedObject(inner) ?? '')
+    ?? shaped(repairJsonStrings(extractBalancedObject(inner) ?? inner));
+}
+
+/** Isolate the first balanced `{…}` object, string/escape aware. Skips leading
+ *  prose ("Here is the JSON: {...}") and drops trailing prose. Null when no
+ *  balanced object exists. */
+export function extractBalancedObject(text: string): string | null {
+  const start = text.indexOf('{');
+  if (start < 0) return null;
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = start; i < text.length; i++) {
+    const c = text[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (c === '\\') esc = true;
+      else if (c === '"') inStr = false;
+    } else if (c === '"') {
+      inStr = true;
+    } else if (c === '{') {
+      depth++;
+    } else if (c === '}') {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null; // unbalanced — safer to abort than to guess
+}
+
+/** Escape raw control characters inside JSON strings and drop trailing commas
+ *  (`{"a": "line1<LF>line2",}` — the exact shape of issue #459). Operates
+ *  character-wise with string/escape tracking so structure outside strings is
+ *  never touched. Idempotent on already-valid JSON. */
+export function repairJsonStrings(text: string): string {
+  let out = '';
+  let inStr = false;
+  let esc = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inStr) {
+      if (esc) {
+        out += c;
+        esc = false;
+      } else if (c === '\\') {
+        out += c;
+        esc = true;
+      } else if (c === '"') {
+        out += c;
+        inStr = false;
+      } else if (c === '\n') {
+        out += '\\n';
+      } else if (c === '\r') {
+        out += '\\r';
+      } else if (c === '\t') {
+        out += '\\t';
+      } else if (c < ' ') {
+        out += `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`;
+      } else {
+        out += c;
+      }
+    } else {
+      out += c;
+      if (c === '"') inStr = true;
+    }
+  }
+  // Trailing commas before } or ] — valid in model output, fatal in JSON.
+  return out.replace(/,\s*([}\]])/g, '$1');
 }
 
 /** `20260606T110912Z` — matches the janitor's backup-dir stamp format. */
