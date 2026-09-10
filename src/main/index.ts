@@ -70,6 +70,7 @@ import { buildWorkerLaunch } from './workerLaunch';
 import { ControlRegistry } from './control';
 import { WorkerWakeWatchdog, type WorkerWakeFacts } from './workerWake';
 import { inboxNudgeText } from '../shared/hiveNudge';
+import { sampleFloorCpu } from './cpuGauge';
 import { formatInr } from '../shared/money';
 import { resolveGodName } from '../shared/godIdentity';
 import { fetchHireManifest, readHireManifestFiles } from './hire';
@@ -2648,6 +2649,21 @@ async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebConten
       if (today >= dailyCap) {
         hive.appendLog({ kind: 'spawn-refused-cap', agentId: opts.id, today, dailyCap });
         return { ok: false, error: `daily spend cap reached ($${today.toFixed(2)} of $${dailyCap.toFixed(2)} today)` };
+      }
+    }
+  }
+  // ── Aggregate CPU cap (R-13, upstream #471) ─────────────────────────────────
+  // Same shape as the spend gate: refuse new spawns while the floor's process
+  // trees burn past the ceiling. POSIX-only sample; null (Windows/empty floor/
+  // ps failure) leaves the gate open — refusing on unknown load would strand
+  // users exactly when machines are oddest.
+  {
+    const cpuCap = readConfig().cpuCapPercent;
+    if (typeof cpuCap === 'number' && cpuCap > 0) {
+      const load = sampleFloorCpu(ptyManager.agentPids());
+      if (load !== null && load >= cpuCap) {
+        hive.appendLog({ kind: 'spawn-refused-cpu', agentId: opts.id, load, cpuCap });
+        return { ok: false, error: `floor CPU cap reached (${Math.round(load)}% of ${cpuCap}% across agents)` };
       }
     }
   }

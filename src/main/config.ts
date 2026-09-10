@@ -286,6 +286,12 @@ export interface HarnessConfig {
    *  (running agents finish — the gate stops NEW spend, it never kills work).
    *  Unset/0 = off. */
   dailyCapUsd?: number;
+  /** Hard aggregate CPU ceiling (percent of all cores, e.g. 400 = 4 cores) summed
+   *  over every agent process TREE (upstream #471). Enforced at spawn like the
+   *  daily cap: over budget refuses with a message, running agents untouched.
+   *  POSIX only (no cheap tree-%CPU source on Windows — gate stays open there,
+   *  logged once per refusal check). Unset/0 = off. */
+  cpuCapPercent?: number;
   /** Per-agent token ceiling, keyed by agent id. When an agent's own WORK tokens
    *  (input + output + cacheCreation — cacheRead excluded, see breaker.ts #189)
    *  exceed its cap the breaker trips that agent alone (independent of the floor

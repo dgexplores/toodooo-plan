@@ -314,6 +314,8 @@ export interface HarnessConfig {
   realtimeIdleDisconnectMs?: number;
   costCapUsd?: number;
   costCapTokens?: number;
+  /** Hard aggregate CPU ceiling (percent of all cores) summed over agent process trees. */
+  cpuCapPercent?: number;
   /** Manual USD→INR rate for dual-currency display (unset = USD only). */
   fxUsdInr?: number;
   /** Hard daily spend cap in USD (IST day, ledger-measured, enforced at spawn). */

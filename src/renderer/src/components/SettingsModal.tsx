@@ -325,6 +325,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
   const breakerCfg = config as BreakerCfgView;
   const [agentBudget, setAgentBudget] = useState(breakerCfg.costCapTokens != null ? String(breakerCfg.costCapTokens) : '');
   const [dailyCap, setDailyCap] = useState(config.dailyCapUsd != null ? String(config.dailyCapUsd) : '');
+  const [cpuCap, setCpuCap] = useState(config.cpuCapPercent != null ? String(config.cpuCapPercent) : '');
   const [fxRate, setFxRate] = useState(config.fxUsdInr != null ? String(config.fxUsdInr) : '');
   const [velocityCeiling, setVelocityCeiling] = useState(breakerCfg.circuitBreaker?.tokenVelocityPerMin != null ? String(breakerCfg.circuitBreaker.tokenVelocityPerMin) : '');
   // v0.3.4: the four previously UI-less breaker fields get controls.
@@ -335,6 +336,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
   const budgetPatch = (): Partial<HarnessConfig> => {
     const tokens = agentBudget.trim() === '' ? undefined : Number(agentBudget);
     const daily = dailyCap.trim() === '' ? undefined : Number(dailyCap);
+    const cpu = cpuCap.trim() === '' ? undefined : Number(cpuCap);
     const fx = fxRate.trim() === '' ? undefined : Number(fxRate);
     const vel = velocityCeiling.trim() === '' ? undefined : Number(velocityCeiling);
     const rep = brkRepeated.trim() === '' ? undefined : Number(brkRepeated);
@@ -342,6 +344,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
     return {
       costCapTokens: Number.isFinite(tokens as number) ? (tokens as number) : undefined,
       dailyCapUsd: Number.isFinite(daily as number) && (daily as number) > 0 ? (daily as number) : undefined,
+      cpuCapPercent: Number.isFinite(cpu as number) && (cpu as number) > 0 ? Math.round(cpu as number) : undefined,
       fxUsdInr: Number.isFinite(fx as number) && (fx as number) > 0 ? (fx as number) : undefined,
       circuitBreaker: {
         ...(breakerCfg.circuitBreaker ?? {}),
@@ -559,6 +562,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
       setNotifications(cc.notifications === true);
       setAgentBudget(cc.costCapTokens != null ? String(cc.costCapTokens) : '');
       setDailyCap(cc.dailyCapUsd != null ? String(cc.dailyCapUsd) : '');
+      setCpuCap(cc.cpuCapPercent != null ? String(cc.cpuCapPercent) : '');
       setFxRate(cc.fxUsdInr != null ? String(cc.fxUsdInr) : '');
       setVelocityCeiling(cc.circuitBreaker?.tokenVelocityPerMin != null ? String(cc.circuitBreaker.tokenVelocityPerMin) : '');
       setSlackEnabled(cc.slackEnabled ?? false);
@@ -1406,6 +1410,18 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                               />
                               <span style={{ fontSize: 11, color: 'var(--cth-ink-500)' }}>
                                 {t('settings.autonomy.fxHint')}
+                              </span>
+                            </label>
+                            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, ...slackLabelStyle }}>
+                              {t('settings.autonomy.cpuCap')}
+                              <input
+                                type="number" min="0" step="50" value={cpuCap}
+                                onChange={(e) => setCpuCap(e.target.value)}
+                                placeholder={t('settings.autonomy.cpuPlaceholder')}
+                                style={{ ...slackInputStyle, width: 140 }}
+                              />
+                              <span style={{ fontSize: 11, color: 'var(--cth-ink-500)' }}>
+                                {t('settings.autonomy.cpuHint')}
                               </span>
                             </label>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 4, ...slackLabelStyle }}>

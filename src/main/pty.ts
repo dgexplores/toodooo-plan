@@ -336,6 +336,15 @@ export function parseNpmCmdShim(shimPath: string, content: string): NpmShimTarge
 
 export class PtyManager {
   private sessions = new Map<string, PtySession>();
+  /** Live agent PIDs for the aggregate CPU gauge (R-13). Best-effort. */
+  agentPids(): number[] {
+    const out: number[] = [];
+    for (const s of this.sessions.values()) {
+      const pid = (s.proc as { pid?: unknown })?.pid;
+      if (typeof pid === 'number' && pid > 0) out.push(pid);
+    }
+    return out;
+  }
   private webContents: WebContents | null = null;
   /** Fired when a PTY exits on its OWN (child finished/crashed/killed
    *  externally), so the main process can run the SAME lifecycle teardown
