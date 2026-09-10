@@ -3002,6 +3002,11 @@ async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebConten
   const res = await ptyManager.spawn(opts, owner);
   if (res.ok) analytics.track('agent_spawned', { provider });
   else analytics.track('agent_spawn_failed', { provider, reason: spawnFailReason(res.error) });
+  // Spawn warnings (today: Windows cmd.exe fallback) must reach the operator,
+  // not just main-process stdout: the activity log is the surface that exists.
+  if (res.ok && res.warnings?.length) {
+    hive.appendLog({ kind: 'spawn-warning', agentId: opts.id, warnings: res.warnings });
+  }
   syncKeepAwake(); // arm the power-save blocker while ≥1 agent PTY is alive (#18)
   // Hand the resolved worktree path back to the renderer so it can persist it on
   // the agent (only set when isolation actually provisioned a worktree above).

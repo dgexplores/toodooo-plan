@@ -21,6 +21,7 @@ import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { arabicJoinRanges } from '@/terminal/arabicJoiner';
 import { attachArabicSpacingFix } from '@/terminal/arabicSpacingFix';
 import { isArabicTerminalEnabled } from '@/terminal/arabicSetting';
+import { shiftEnterSequence } from '@/terminal/keys';
 import { SCROLLBACK_MAX } from '@shared/limits';
 import {
   classifyPathToken, isPathToken, pathTokenMatcher, stripPathToken, type PathAction
@@ -94,7 +95,6 @@ const pool = new Map<string, TerminalEntry>();
 import { parseHexColor, oscColorBody, isDarkBackground } from './termColor';
 
 type ThemeMap = Record<string, string>;
-
 
 /** Tell a running program the terminal's theme changed.
  *
@@ -258,6 +258,16 @@ export function acquireTerminal(ptyId: string, theme?: ThemeMap, fontSize = 14):
   };
   term.attachCustomKeyEventHandler((ev) => {
     if (ev.type !== 'keydown') return true;
+    // Shift+Enter is a newline, not a submit: xterm sends bare `\r` (same as
+    // Enter) by default, but Claude Code submits on Enter and expects a
+    // newline on Shift+Enter (its iTerm/VS Code keymaps do this; issue #481).
+    // Without the mapping there is no way to type a multi-line prompt.
+    const shifted = shiftEnterSequence(ev);
+    if (shifted !== null) {
+      if (!entry.exited) window.cth.writePty(ptyId, shifted);
+      ev.preventDefault();
+      return false;
+    }
     if (!(ev.ctrlKey || ev.metaKey)) return true;
     const key = ev.key.toLowerCase();
     if (key === 'c' && (ev.shiftKey || term.hasSelection())) {

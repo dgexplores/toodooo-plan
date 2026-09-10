@@ -146,6 +146,17 @@ export function buildCmdCommandLine(resolved: string, args: string[]): string {
   return `/d /s /c "${inner}"`;
 }
 
+/** Warning text for the lossy Windows cmd.exe fallback. Pure so the wording
+ *  (which names the truncation hazard) is unit-testable; the spawn site
+ *  decides delivery (console + result + log). Called only on the fallback path. */
+export function cmdFallbackWarning(resolved: string, args: string[]): string {
+  const multiline = args.some((a) => a.includes('\n'));
+  return `Windows: "${resolved}" could not be decoded as an npm shim — falling back to cmd.exe.` +
+    (multiline
+      ? ' A MULTI-LINE ARGUMENT IS PRESENT AND WILL BE TRUNCATED AT ITS FIRST NEWLINE.' +
+        ' The agent will start and look healthy without ever receiving the hive protocol.'
+      : ' No multi-line argument in this spawn, so nothing is lost here.');
+}
 /** What an npm-style Windows `.cmd` shim actually runs, decoded from its text. */
 export interface NpmShimTarget {
   /** BARE interpreter name — `node`, `bun` or `deno` — to be resolved off PATH by
@@ -583,7 +594,7 @@ export class PtyManager {
     }
   }
 
-  async spawn(opts: SpawnOptions, owner: WebContents | null = null): Promise<{ ok: boolean; error?: string }> {
+  async spawn(opts: SpawnOptions, owner: WebContents | null = null): Promise<{ ok: boolean; error?: string; warnings?: string[] }> {
     if (this.sessions.has(opts.id)) {
       return { ok: false, error: `pty already exists for id ${opts.id}` };
     }
@@ -614,6 +625,9 @@ export class PtyManager {
       const lower = resolved.toLowerCase();
       const directExe = lower.endsWith('.exe') || lower.endsWith('.com');
       const needsCmd = isWin && !directExe;
+      // Non-fatal spawn notes surfaced to the operator (log + result): today
+      // only the cmd.exe fallback. Collected, not thrown — the spawn proceeds.
+      const warnings: string[] = [];
       // Prefer decoding an npm shim to its interpreter over the cmd.exe route (see
       // resolveWindowsShimSpawn). win32-only and null-on-anything-unexpected, so
       // macOS/Linux and every undecodable Windows target keep today's behaviour.
@@ -684,14 +698,9 @@ export class PtyManager {
         // diagnose it: which target refused to decode, and whether a multi-line
         // argument is actually at risk in THIS spawn.
         if (needsCmd) {
-          const multiline = (opts.args ?? []).some((a) => a.includes('\n'));
-          console.warn(
-            `[pty] Windows: "${resolved}" could not be decoded as an npm shim — falling back to cmd.exe.` +
-            (multiline
-              ? ' A MULTI-LINE ARGUMENT IS PRESENT AND WILL BE TRUNCATED AT ITS FIRST NEWLINE.' +
-                ' The agent will start and look healthy without ever receiving the hive protocol.'
-              : ' No multi-line argument in this spawn, so nothing is lost here.')
-          );
+          const warning = cmdFallbackWarning(resolved, opts.args ?? []);
+          console.warn(`[pty] ${warning}`);
+          warnings.push(warning);
         }
       }
       const proc = pty.spawn(file, spawnArgs, {
@@ -762,7 +771,7 @@ export class PtyManager {
         } catch { /* never throw out of onExit */ }
       });
 
-      return { ok: true };
+      return warnings.length > 0 ? { ok: true, warnings } : { ok: true };
     } catch (e) {
       // A just-installed binary can still be hiding behind a negative TTL entry
       // (or a positive entry whose binary vanished): bust the cache so the very
