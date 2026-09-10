@@ -40,8 +40,73 @@ interface AgentControl {
   steerQueue: string[];
 }
 
+/** Durable form of the registry (Sets don't survive JSON). */
+export interface ControlPersisted {
+  agents: Record<string, {
+    paused: boolean;
+    halted: boolean;
+    autoDeliveryPaused: boolean;
+    gatedTools: string[];
+    steerQueue: string[];
+  }>;
+}
+
+/** Storage seam — injected so this file keeps zero imports and stays
+ *  unit-testable. The app wires it to the durable SQLite kv store; a restart
+ *  then resumes pauses, halts, gates and queued steers instead of dropping
+ *  operator intent on the floor (previously all in-memory). */
+export interface ControlPersistence {
+  load?: () => unknown;
+  save?: (v: ControlPersisted) => void;
+}
+
 export class ControlRegistry {
   private readonly map = new Map<string, AgentControl>();
+
+  constructor(private persistence?: ControlPersistence) {
+    this.hydrate();
+  }
+
+  /** Reload persisted state (call after the store opens — constructor load is
+   *  best-effort for stores that open later). Safe to call repeatedly. */
+  hydrate(): void {
+    let raw: unknown;
+    try {
+      raw = this.persistence?.load?.();
+    } catch { return; }
+    if (!raw || typeof raw !== 'object') return;
+    const agents = (raw as Partial<ControlPersisted>).agents;
+    if (!agents || typeof agents !== 'object') return;
+    for (const [id, a] of Object.entries(agents)) {
+      if (!a || typeof a !== 'object' || typeof id !== 'string' || !id) continue;
+      const rec = a as Record<string, unknown>;
+      this.map.set(id, {
+        paused: rec.paused === true,
+        halted: rec.halted === true,
+        autoDeliveryPaused: rec.autoDeliveryPaused === true,
+        gatedTools: new Set(Array.isArray(rec.gatedTools) ? rec.gatedTools.filter((t): t is string => typeof t === 'string') : []),
+        steerQueue: Array.isArray(rec.steerQueue)
+          ? rec.steerQueue.filter((s): s is string => typeof s === 'string').slice(-MAX_PENDING_STEERS).map((s) => s.slice(0, 10000))
+          : []
+      });
+    }
+  }
+
+  private persistNow(): void {
+    try {
+      const agents: ControlPersisted['agents'] = {};
+      for (const [id, c] of this.map) {
+        agents[id] = {
+          paused: c.paused,
+          halted: c.halted,
+          autoDeliveryPaused: c.autoDeliveryPaused,
+          gatedTools: Array.from(c.gatedTools),
+          steerQueue: [...c.steerQueue]
+        };
+      }
+      this.persistence?.save?.({ agents });
+    } catch { /* durability is best-effort — never break a control action */ }
+  }
 
   private ensure(id: string): AgentControl {
     let c = this.map.get(id);
@@ -60,9 +125,10 @@ export class ControlRegistry {
 
   // ─── Operator actions (wired to IPC) ───────────────────────────────────────
 
-  pause(id: string, on: boolean): void { this.ensure(id).paused = on; }
+  pause(id: string, on: boolean): void { this.ensure(id).paused = on; this.persistNow(); }
   pauseAutoDelivery(id: string, on: boolean): void {
     this.ensure(id).autoDeliveryPaused = on;
+    this.persistNow();
   }
   replaceAutoDeliveryPauses(ids: Iterable<string>): void {
     const paused = new Set(ids);
@@ -70,10 +136,12 @@ export class ControlRegistry {
       control.autoDeliveryPaused = paused.has(id);
     }
     for (const id of paused) this.ensure(id).autoDeliveryPaused = true;
+    this.persistNow();
   }
   gateTool(id: string, tool: string, on: boolean): void {
     const c = this.ensure(id);
     if (on) c.gatedTools.add(tool); else c.gatedTools.delete(tool);
+    this.persistNow();
   }
   steer(id: string, text: string): void {
     const t = text.trim();
@@ -87,14 +155,15 @@ export class ControlRegistry {
       q.shift(); // keep the newest note, drop the oldest
     }
     q.push(t.slice(0, 10000)); // hook additionalContext cap
+    this.persistNow();
   }
   /** Request a graceful stop at the next hook boundary. */
-  halt(id: string): void { this.ensure(id).halted = true; }
+  halt(id: string): void { this.ensure(id).halted = true; this.persistNow(); }
   /** Drop all queued-but-undelivered steer notes (e.g. closing time cancelled
    *  before a busy agent's next hook boundary consumed the instruction). */
-  clearSteers(id: string): void { const c = this.map.get(id); if (c) c.steerQueue.length = 0; }
+  clearSteers(id: string): void { const c = this.map.get(id); if (c) c.steerQueue.length = 0; this.persistNow(); }
   /** Clear pause + halt (lets a paused/halted agent run again). Keeps gates. */
-  resume(id: string): void { const c = this.ensure(id); c.paused = false; c.halted = false; }
+  resume(id: string): void { const c = this.ensure(id); c.paused = false; c.halted = false; this.persistNow(); }
 
   // ─── Reads (used by HookServer) ────────────────────────────────────────────
 
@@ -113,7 +182,11 @@ export class ControlRegistry {
   }
 
   /** Dequeue one pending steer note for delivery, or undefined. */
-  takeSteer(id: string): string | undefined { return this.map.get(id)?.steerQueue.shift(); }
+  takeSteer(id: string): string | undefined {
+    const out = this.map.get(id)?.steerQueue.shift();
+    if (out !== undefined) this.persistNow();
+    return out;
+  }
 
   snapshot(id: string): AgentControlSnapshot {
     const c = this.map.get(id);

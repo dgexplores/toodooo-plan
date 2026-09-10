@@ -243,7 +243,10 @@ const hive = new HiveManager(
 );
 // #7C — operator control state (pause/gate/steer/halt), read by the HookServer
 // when deciding hook returns.
-const control = new ControlRegistry();
+const control = new ControlRegistry({
+  load: () => persist.getKv('control/v1'),
+  save: (v) => persist.setKv('control/v1', v)
+});
 // Stage 7A — the live observability tap. Receives Claude Code's first-party OTel
 // over loopback OTLP/JSON and exposes the locked usage-provider seam. resolveCwd
 // lets the transcript fallback find an agent's cwd from the hive registry.
@@ -266,6 +269,9 @@ const usageProvider: UsageProvider = telemetry;
 const breaker = new CircuitBreaker(() => {
   const c = readConfig();
   return { ...(c.circuitBreaker ?? {}), costCapUsd: c.costCapUsd, costCapTokens: c.costCapTokens, agentTokenCaps: c.agentTokenCaps };
+}, {
+  load: () => persist.getKv('breaker/v1'),
+  save: (v) => persist.setKv('breaker/v1', v)
 });
 // Always-on beats (decoupled from the optional heartbeat): the live fleet snapshot
 // Michael reads + the breaker beat, so guardrails + monitoring work even when the
@@ -5305,6 +5311,11 @@ app.whenReady().then(() => {
   // Guarded: a DB failure (e.g. a bad native build) must degrade to defaults,
   // never block app startup.
   try { persist.open(); } catch (e) { console.error('[db] open failed:', e); }
+  // The registries constructed above loaded best-effort (store was closed);
+  // re-hydrate now that it is open so pauses, halts, gates, steers and breaker
+  // levels/counters resume across restarts instead of resetting.
+  try { control.hydrate(); } catch (e) { console.error('[control] hydrate failed:', e); }
+  try { breaker.hydrate(); } catch (e) { console.error('[breaker] hydrate failed:', e); }
   // Auto-update from GitHub releases (packaged builds only; gated on the
   // `autoUpdate` config flag). Download-in-background + restart-to-apply toast;
   // never restarts on its own. Falls back to a notify-only releases/latest

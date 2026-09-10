@@ -107,7 +107,7 @@ const PROGRESS_TOOL_WINDOW_MS = 300_000;
  *  one-beat blip (inbox ack, statusline burst) never steers on its own. */
 const NO_PROGRESS_BEATS = 2;
 
-interface AgentBreakerState {
+export interface AgentBreakerState {
   level: BreakerLevel;
   reason: string;
   lastSample: AgentUsageSample | null;
@@ -135,10 +135,61 @@ interface AgentBreakerState {
   noProgressBeats: number;
 }
 
+/** Storage seam — injected so this file keeps zero imports and stays
+ *  standalone-transpilable for tests. The app wires it to the durable SQLite
+ *  kv store: levels and counters survive restarts instead of handing every
+ *  runaway a fresh set of counters (previously all in-memory). */
+export interface BreakerPersistence {
+  load?: () => unknown;
+  save?: (v: Record<string, AgentBreakerState>) => void;
+}
+
 export class CircuitBreaker {
   private agents = new Map<string, AgentBreakerState>();
 
-  constructor(private getConfig: () => CircuitBreakerConfig & { costCapUsd?: number; costCapTokens?: number; agentTokenCaps?: Record<string, number> }) {}
+  constructor(private getConfig: () => CircuitBreakerConfig & { costCapUsd?: number; costCapTokens?: number; agentTokenCaps?: Record<string, number> }, private persistence?: BreakerPersistence) {
+    this.hydrate();
+  }
+
+  /** Reload persisted per-agent state (call after the store opens — the
+   *  constructor load is best-effort for stores that open later). Velocity
+   *  baselines (lastSample) are deliberately NOT restored: a stale baseline
+   *  across a restart would false-trip on the first post-restart beat, so the
+   *  first beat after a restart behaves exactly like a fresh boot (skip), while
+   *  counters and levels survive. */
+  hydrate(): void {
+    let raw: unknown;
+    try {
+      raw = this.persistence?.load?.();
+    } catch { return; }
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return;
+    for (const [id, s] of Object.entries(raw as Record<string, unknown>)) {
+      if (typeof id !== 'string' || !id || !s || typeof s !== 'object') continue;
+      const r = s as Record<string, unknown>;
+      if (!LEVELS.includes(r.level as BreakerLevel)) continue;
+      const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+      this.agents.set(id, {
+        level: r.level as BreakerLevel,
+        reason: typeof r.reason === 'string' ? r.reason.slice(0, 500) : '',
+        lastSample: null, // see above: baseline resets, counters survive
+        repeatKey: typeof r.repeatKey === 'string' ? r.repeatKey.slice(0, 500) : null,
+        repeatCount: num(r.repeatCount),
+        errorCount: num(r.errorCount),
+        compactingUntil: num(r.compactingUntil),
+        lastDistinctToolAt: num(r.lastDistinctToolAt),
+        lastUserPromptAt: num(r.lastUserPromptAt),
+        noProgressBeats: num(r.noProgressBeats)
+      });
+    }
+  }
+
+  private persistNow(): void {
+    try {
+      const out: Record<string, AgentBreakerState> = {};
+      for (const [id, s] of this.agents) out[id] = { ...s };
+      this.persistence?.save?.(out);
+    } catch { /* durability is best-effort — never break a beat */ }
+  }
 
   private cfg() {
     const c = this.getConfig() ?? {};
@@ -170,6 +221,7 @@ export class CircuitBreaker {
   /** Drop all state for an agent (call on archive/kill so it can't leak/zombie). */
   forget(agentId: string): void {
     this.agents.delete(agentId);
+    this.persistNow();
   }
 
   /** Current breaker level for an agent (for the live fleet snapshot). */
@@ -265,6 +317,7 @@ export class CircuitBreaker {
         s.level = 'healthy'; s.reason = '';
         decisions.push({ state: { agentId, level: 'healthy', reason: '', ts: nowMs }, action: 'none', changed });
       }
+      this.persistNow();
       return decisions;
     }
 
@@ -321,6 +374,7 @@ export class CircuitBreaker {
         changed
       });
     }
+    this.persistNow(); // beat granularity: counters survive a crash mid-window
     return decisions;
   }
 
