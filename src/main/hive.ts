@@ -1717,6 +1717,56 @@ export class HiveManager {
     }
   }
 
+  /** Export one client's bundle: matching agent dirs + their ledger slice, as
+   *  a tgz via system tar (ships with macOS/Win10+/linux). Returns the archive
+   *  path. Deletion is a separate explicit step (rm): on SSDs "secure delete"
+   *  is a fiction, so we don't pretend — export first, delete plainly. */
+  exportClient(clientKey: string, destDir: string): { ok: boolean; path?: string; agents?: number; error?: string } {
+    const root = this.root();
+    if (!root) return { ok: false, error: 'hive disabled' };
+    const key = (clientKey ?? '').trim().slice(0, 64);
+    if (!key) return { ok: false, error: 'client key required' };
+    if (!destDir || !isAbsolute(destDir)) return { ok: false, error: 'absolute destination required' };
+    try {
+      const reg = this.registry();
+      const ids = Object.keys(reg.agents).filter((id) => reg.agents[id]?.clientKey === key);
+      if (ids.length === 0) return { ok: false, error: `no agents tagged "${key}"` };
+      mkdirSync(destDir, { recursive: true });
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const out = join(destDir, `toodooo-${key}-${stamp}.tgz`.replace(/[^A-Za-z0-9._-]/g, '_'));
+      // Ledger slice for just these agents, alongside.
+      const slice: string[] = [];
+      try {
+        const text = readFileSync(join(root, 'cost-ledger.jsonl'), 'utf8');
+        for (const line of text.split('\n')) {
+          if (!line.trim()) continue;
+          try {
+            const r = JSON.parse(line) as { agent_id?: unknown };
+            if (typeof r.agent_id === 'string' && ids.includes(r.agent_id)) slice.push(line);
+          } catch { /* skip bad rows */ }
+        }
+      } catch { /* no ledger yet — bundle without it */ }
+      const slicePath = join(destDir, `.ledger-slice-${stamp}.jsonl`);
+      writeFileSync(slicePath, slice.length > 0 ? slice.join('\n') + '\n' : '', 'utf8');
+      // Exclude flags precede the paths they filter (BSD tar is positional);
+      // the slice rides a second -C so it never lands inside the hive (git).
+      // Single invocation: tar -r cannot append to compressed archives.
+      const args = ['-czf', out, '--exclude=.git', '-C', root];
+      for (const id of ids) args.push(join('agents', id));
+      args.push('-C', destDir, `.ledger-slice-${stamp}.jsonl`);
+      const r = spawnSync('tar', args, { encoding: 'utf8', timeout: 60000 });
+      try {
+        rmSync(slicePath);
+      } catch { /* best-effort cleanup */ }
+      if (r.error || r.status !== 0 || !existsSync(out)) {
+        return { ok: false, error: 'tar failed' };
+      }
+      this.appendLog({ kind: 'client-export', clientKey: key, agents: ids.length, path: out });
+      return { ok: true, path: out, agents: ids.length };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+  }
   /** Inject a message directly (used by the orchestrator / UI / tests). */
   send(partial: Partial<HiveMessage>, from = 'system'): HiveMessage {
     const msg = this.normalize(partial, from);

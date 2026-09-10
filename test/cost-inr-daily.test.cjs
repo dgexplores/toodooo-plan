@@ -105,3 +105,29 @@ test('fleet rows carry dual currency (null when no rate)', () => {
   const src = readSrc('src/main/index.ts');
   assert.match(src, /usdInr: formatInr\(usd, readConfig\(\)\.fxUsdInr\)/);
 });
+
+test('client export bundles agent dirs + ledger slice, rejects empties', async (t) => {
+  const { execFileSync } = require('node:child_process');
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'md-export-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  const hive = new HiveManager(() => home);
+  await hive.ensureAgent({ id: 'a', name: 'A', provider: 'claude', cwd: home });
+  await hive.ensureAgent({ id: 'b', name: 'B', provider: 'claude', cwd: home });
+  hive.setClientKey('a', 'acme');
+  const base = { agentId: 'a', sessionId: 's', ts: Date.now(), input: 1, output: 1, cacheRead: 0, cacheCreation: 0, model: 'm', usd: 1 };
+  hive.appendCostLedger({ ...base });
+  hive.appendCostLedger({ ...base, agentId: 'b', usd: 2 });
+  const dest = fs.mkdtempSync(path.join(os.tmpdir(), 'md-export-dest-'));
+  t.after(() => fs.rmSync(dest, { recursive: true, force: true }));
+  const r = hive.exportClient('acme', dest);
+  assert.equal(r.ok, true, r.error);
+  assert.equal(r.agents, 1);
+  assert.ok(fs.existsSync(r.path));
+  const list = execFileSync('tar', ['-tzf', r.path], { encoding: 'utf8' });
+  assert.ok(list.includes('agents/a/'), 'agent dir bundled');
+  assert.ok(!list.split('\n').some((l) => l.startsWith('agents/b/')), 'other client excluded');
+  assert.ok(list.includes('.ledger-slice-'), 'ledger slice bundled');
+  assert.equal(hive.exportClient('nobody', dest).ok, false);
+  assert.equal(hive.exportClient('', dest).ok, false);
+  assert.equal(hive.exportClient('acme', 'relative/path').ok, false);
+});

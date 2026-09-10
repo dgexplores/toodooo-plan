@@ -3523,6 +3523,12 @@ ipcMain.handle('hive:setClientKey', (_evt, id: unknown, key: unknown) => {
   return hive.setClientKey(id, key);
 });
 ipcMain.handle('cost:byClient', () => hive.spendByClient());
+ipcMain.handle('client:export', (_evt, key: unknown, dest: unknown) => {
+  if (typeof key !== 'string' || typeof dest !== 'string') {
+    return { ok: false, error: 'Invalid export request' };
+  }
+  return hive.exportClient(key, dest);
+});
 ipcMain.handle('hive:setAgentHold', (_evt, id: unknown, hold: unknown) => {
   if (typeof id !== 'string' || typeof hold !== 'boolean') {
     return { ok: false, error: 'Invalid hold request' };

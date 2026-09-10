@@ -772,6 +772,9 @@ const api = {
   /** Per-client IST-day spend + total + unattributed. Powers owner digests. */
   costByClient: (): Promise<{ byClient: Record<string, number>; unattributed: number; total: number }> =>
     ipcRenderer.invoke('cost:byClient'),
+  /** Export one client's agent dirs + ledger slice as tgz. Deletion is separate. */
+  clientExport: (key: string, dest: string): Promise<{ ok: boolean; path?: string; agents?: number; error?: string }> =>
+    ipcRenderer.invoke('client:export', key, dest),
   /** Put an agent on hold (the human has them 1:1) or take it off. Held agents
    *  keep running; Michael is told to stop routing work to them. */
   hiveSetAgentHold: (id: string, hold: boolean): Promise<{ ok: boolean; onHold?: boolean; error?: string }> =>
