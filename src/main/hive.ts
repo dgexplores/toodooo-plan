@@ -40,6 +40,7 @@ import {
 import { MCP_CATALOG } from '../shared/mcpCatalog';
 import { selectBroadcastTargets } from '../shared/broadcast';
 import { LOG_TAIL_BYTES } from '../shared/limits';
+import { istDayStart } from '../shared/money';
 import { preferredAgentRole } from '../shared/agentRole';
 import { mergeTaskLedger } from '../shared/taskLedger';
 import { expandTilde } from './fs';
@@ -2704,8 +2705,7 @@ export class HiveManager {
         + 'Route work to someone on this list before spawning anyone new.';
     } catch { return null; }
   }
-  logTail(n = 200): unknown[] {
-    const root = this.root();
+  logTail(n = 200): unknown[] {    const root = this.root();
     if (!root || !existsSync(join(root, 'log.jsonl'))) return [];
     // Windowed read: the file grows forever and callers poll it, so parsing
     // the whole thing per call is a latency + memory leak. Read at most
@@ -2857,6 +2857,32 @@ export class HiveManager {
       ...(sample.estimated ? { estimated: true } : {})
     };
     try { appendFileSync(join(root, 'cost-ledger.jsonl'), JSON.stringify(row) + '\n', 'utf8'); } catch { /* noop */ }
+  }
+
+  /** USD spent since IST midnight (daily cap basis). Full ledger read — exact,
+   *  but called only on spawn (human-paced, rare), never on a poll path. If
+   *  the ledger ever grows past comfortable read size, this is where a daily
+   *  rollup cache goes (cost-ledger rotation is separately open). */
+  todaySpendUsd(now = Date.now()): number {
+    const root = this.root();
+    if (!root) return 0;
+    const start = istDayStart(now);
+    let total = 0;
+    try {
+      const text = readFileSync(join(root, 'cost-ledger.jsonl'), 'utf8');
+      for (const line of text.split('\n')) {
+        if (!line.trim()) continue;
+        try {
+          const r = JSON.parse(line) as { ts?: unknown; usd?: unknown };
+          if (typeof r.ts === 'number' && r.ts >= start && typeof r.usd === 'number' && r.usd > 0) {
+            total += r.usd;
+          }
+        } catch { /* one bad row never breaks the sum */ }
+      }
+    } catch {
+      return 0;
+    }
+    return total;
   }
 
   // — json + atomic io —

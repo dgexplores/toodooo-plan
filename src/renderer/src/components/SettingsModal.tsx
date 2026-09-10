@@ -323,6 +323,8 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
   };
   const breakerCfg = config as BreakerCfgView;
   const [agentBudget, setAgentBudget] = useState(breakerCfg.costCapTokens != null ? String(breakerCfg.costCapTokens) : '');
+  const [dailyCap, setDailyCap] = useState(config.dailyCapUsd != null ? String(config.dailyCapUsd) : '');
+  const [fxRate, setFxRate] = useState(config.fxUsdInr != null ? String(config.fxUsdInr) : '');
   const [velocityCeiling, setVelocityCeiling] = useState(breakerCfg.circuitBreaker?.tokenVelocityPerMin != null ? String(breakerCfg.circuitBreaker.tokenVelocityPerMin) : '');
   // v0.3.4: the four previously UI-less breaker fields get controls.
   const [brkEnabled, setBrkEnabled] = useState<boolean>(breakerCfg.circuitBreaker?.enabled !== false);
@@ -331,11 +333,15 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
   const [brkErrStorm, setBrkErrStorm] = useState(breakerCfg.circuitBreaker?.errorStormLimit != null ? String(breakerCfg.circuitBreaker.errorStormLimit) : '');
   const budgetPatch = (): Partial<HarnessConfig> => {
     const tokens = agentBudget.trim() === '' ? undefined : Number(agentBudget);
+    const daily = dailyCap.trim() === '' ? undefined : Number(dailyCap);
+    const fx = fxRate.trim() === '' ? undefined : Number(fxRate);
     const vel = velocityCeiling.trim() === '' ? undefined : Number(velocityCeiling);
     const rep = brkRepeated.trim() === '' ? undefined : Number(brkRepeated);
     const storm = brkErrStorm.trim() === '' ? undefined : Number(brkErrStorm);
     return {
       costCapTokens: Number.isFinite(tokens as number) ? (tokens as number) : undefined,
+      dailyCapUsd: Number.isFinite(daily as number) && (daily as number) > 0 ? (daily as number) : undefined,
+      fxUsdInr: Number.isFinite(fx as number) && (fx as number) > 0 ? (fx as number) : undefined,
       circuitBreaker: {
         ...(breakerCfg.circuitBreaker ?? {}),
         enabled: brkEnabled,
@@ -551,6 +557,8 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
       const cc = c as BreakerCfgView;
       setNotifications(cc.notifications === true);
       setAgentBudget(cc.costCapTokens != null ? String(cc.costCapTokens) : '');
+      setDailyCap(cc.dailyCapUsd != null ? String(cc.dailyCapUsd) : '');
+      setFxRate(cc.fxUsdInr != null ? String(cc.fxUsdInr) : '');
       setVelocityCeiling(cc.circuitBreaker?.tokenVelocityPerMin != null ? String(cc.circuitBreaker.tokenVelocityPerMin) : '');
       setSlackEnabled(cc.slackEnabled ?? false);
       setSlackSecret('');
@@ -1373,6 +1381,30 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                               />
                               <span style={{ fontSize: 11, color: 'var(--cth-ink-500)' }}>
                                 {fmtBudgetTokens(agentBudget) ? t('settings.autonomy.budgetEquals', { value: fmtBudgetTokens(agentBudget) }) : t('settings.autonomy.budgetTotal')}
+                              </span>
+                            </label>
+                            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, ...slackLabelStyle }}>
+                              {t('settings.autonomy.dailyCap')}
+                              <input
+                                type="number" min="0" step="1" value={dailyCap}
+                                onChange={(e) => setDailyCap(e.target.value)}
+                                placeholder={t('settings.autonomy.dailyCapPlaceholder')}
+                                style={{ ...slackInputStyle, width: 140 }}
+                              />
+                              <span style={{ fontSize: 11, color: 'var(--cth-ink-500)' }}>
+                                {t('settings.autonomy.dailyCapHint')}
+                              </span>
+                            </label>
+                            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, ...slackLabelStyle }}>
+                              {t('settings.autonomy.fxRate')}
+                              <input
+                                type="number" min="0" step="0.5" value={fxRate}
+                                onChange={(e) => setFxRate(e.target.value)}
+                                placeholder={t('settings.autonomy.fxPlaceholder')}
+                                style={{ ...slackInputStyle, width: 140 }}
+                              />
+                              <span style={{ fontSize: 11, color: 'var(--cth-ink-500)' }}>
+                                {t('settings.autonomy.fxHint')}
                               </span>
                             </label>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 4, ...slackLabelStyle }}>

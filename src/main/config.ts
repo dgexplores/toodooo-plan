@@ -277,6 +277,15 @@ export interface HarnessConfig {
    *  $-cap; total = input + output + cacheRead + cacheCreation, summed across the
    *  floor (the biggest token spender is blamed). */
   costCapTokens?: number;
+  /** Manual USD→INR rate for dual-currency display (fleet, HUD). Unset/0 =
+   *  USD only. Manual (not fetched) so it works offline and costs nothing;
+   *  the UI labels it as user-set. */
+  fxUsdInr?: number;
+  /** Hard DAILY spend ceiling in USD, measured per IST day from the ledger.
+   *  Enforced at spawn: past the cap, new spawns refuse with a plain message
+   *  (running agents finish — the gate stops NEW spend, it never kills work).
+   *  Unset/0 = off. */
+  dailyCapUsd?: number;
   /** Per-agent token ceiling, keyed by agent id. When an agent's own WORK tokens
    *  (input + output + cacheCreation — cacheRead excluded, see breaker.ts #189)
    *  exceed its cap the breaker trips that agent alone (independent of the floor

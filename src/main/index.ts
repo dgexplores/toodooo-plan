@@ -70,6 +70,7 @@ import { buildWorkerLaunch } from './workerLaunch';
 import { ControlRegistry } from './control';
 import { WorkerWakeWatchdog, type WorkerWakeFacts } from './workerWake';
 import { inboxNudgeText } from '../shared/hiveNudge';
+import { formatInr } from '../shared/money';
 import { resolveGodName } from '../shared/godIdentity';
 import { fetchHireManifest, readHireManifestFiles } from './hire';
 import { parseHireDeepLink, type HireManifest } from '../shared/hire';
@@ -1298,6 +1299,7 @@ function writeFleetSnapshot(): void {
         // fall back to the session figure rather than publishing a cold $0.
         const lifetime = costTotals.usdFor(id);
         const sessionUsd = u ? Number(u.usd.toFixed(4)) : 0;
+        const usd = lifetime === null ? sessionUsd : Number(lifetime.toFixed(4));
         return {
           id,
           name: a.name,
@@ -1306,7 +1308,9 @@ function writeFleetSnapshot(): void {
           isGod: !!a.isGod,
           breaker: breaker.levelFor(id),
           tokens,
-          usd: lifetime === null ? sessionUsd : Number(lifetime.toFixed(4)),
+          usd,
+          // Dual-currency for INR owners (null = USD-only, no rate set).
+          usdInr: formatInr(usd, readConfig().fxUsdInr),
           sessionUsd,
           lastTool: spans.length ? spans[spans.length - 1].tool : null,
           lastActiveSecAgo: u ? Math.round((now - u.ts) / 1000) : null,
@@ -2632,6 +2636,20 @@ async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebConten
   // the missing-CLI relaunch (the only re-entry, index.ts install-exit handler) does
   // NOT double-count a single user attempt — it is the SAME attempt continuing.
   if (!opts.noAutoInstall) analytics.track('agent_spawn_attempted', { provider });
+  // ── Daily spend cap (hard, IST day, ledger-measured) ────────────────────────
+  // Refuse NEW spawns past the cap with a plain message. Running agents finish
+  // untouched — the gate stops new spend, it never kills work. Checked here
+  // (the single door) so UI hires, restores and god-spawned workers obey it.
+  {
+    const dailyCap = readConfig().dailyCapUsd;
+    if (typeof dailyCap === 'number' && dailyCap > 0 && hive.enabled()) {
+      const today = hive.todaySpendUsd();
+      if (today >= dailyCap) {
+        hive.appendLog({ kind: 'spawn-refused-cap', agentId: opts.id, today, dailyCap });
+        return { ok: false, error: `daily spend cap reached ($${today.toFixed(2)} of $${dailyCap.toFixed(2)} today)` };
+      }
+    }
+  }
   // ── Missing engine CLI → run its installer visibly (pre-spawn) ───────────────
   // If the agent's engine binary (claude/codex/…) isn't installed, spawning it
   // just dies with "— process exited (code 1) —" and the user has no idea why.

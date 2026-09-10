@@ -314,6 +314,10 @@ export interface HarnessConfig {
   realtimeIdleDisconnectMs?: number;
   costCapUsd?: number;
   costCapTokens?: number;
+  /** Manual USD→INR rate for dual-currency display (unset = USD only). */
+  fxUsdInr?: number;
+  /** Hard daily spend cap in USD (IST day, ledger-measured, enforced at spawn). */
+  dailyCapUsd?: number;
   agentTokenCaps?: Record<string, number>;
   autoDeliveryPausedAgents?: string[];
   maxTurns?: number;

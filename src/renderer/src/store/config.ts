@@ -114,6 +114,10 @@ export interface HarnessConfig {
   costCapUsd?: number;
   /** Hard total-token ceiling across active agents (the user-facing budget). */
   costCapTokens?: number;
+  /** Manual USD→INR rate for dual-currency display (unset = USD only). */
+  fxUsdInr?: number;
+  /** Hard daily spend cap in USD (IST day, ledger-measured, enforced at spawn). */
+  dailyCapUsd?: number;
   /** Per-agent total-token ceiling, keyed by agent id. Overrides the floor budget
    *  for that agent's meter and trips the breaker for it alone. */
   agentTokenCaps?: Record<string, number>;
