@@ -96,8 +96,9 @@ export interface HarnessConfig {
    *  Mirrors the main-process field (src/main/config.ts). */
   telemetryEnabled?: boolean;
   slackEnabled?: boolean;
-  slackSigningSecret?: string;
-  slackBotToken?: string;
+  /** Write-only secrets: reads carry presence, never values (mirrors main). */
+  hasSlackSigningSecret?: boolean;
+  hasSlackBotToken?: boolean;
   slackChannelId?: string;
   slackPort?: number;
   /** Opt-in app/voice-initiated proactive Slack posting (default OFF). Mirrors
@@ -105,7 +106,7 @@ export interface HarnessConfig {
   slackProactivePosting?: boolean;
   /** Free Flow voice dictation (mirrors src/main/config.ts). */
   freeflowEnabled?: boolean;
-  groqApiKey?: string;
+  hasGroqApiKey?: boolean;
   freeflowModel?: string;
   /** Realtime voice idle auto-disconnect (ms); default 180000 (3 min), 0 = never.
    *  Tuned in Settings → Realtime Michael; the cost cap stays the runaway guard. */
@@ -137,8 +138,8 @@ export interface HarnessConfig {
    *  type locally.
    *  @deprecated Use `webhookTriggers`. */
   webhookEnabled?: boolean;
-  /** @deprecated Use `webhookTriggers[].secret`. */
-  webhookSecret?: string;
+  /** @deprecated Use `webhookTriggers`. */
+  hasWebhookSecret?: boolean;
   /** @deprecated The port belongs to the shared server, not to any one trigger. */
   webhookPort?: number;
   /** Auto-compaction / auto-clearing of agent terminal context. Main deep-fills

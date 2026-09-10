@@ -140,10 +140,12 @@ export function newWebhook(secret: string, index: number): WebhookTrigger {
 
 /* ───────────────────────────── organisation ──────────────────────────────── */
 
-/** `null` on failure; the store mirror stands. */
+/** `null` on failure; the store mirror stands. Redacted reads merge to the
+ *  full shape with a blank key (write-only: the value never crosses). */
 export async function getOrgTrigger(): Promise<OrgTriggerConfig | null> {
   try {
-    return (await window.cth.getOrgTrigger()) ?? null;
+    const r = (await window.cth.getOrgTrigger()) ?? null;
+    return r ? { ...r, apiKey: '' } : null;
   } catch {
     return null;
   }

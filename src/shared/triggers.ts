@@ -159,8 +159,12 @@ export const DEFAULT_CONTEXT_TRIGGER: ContextTriggerConfig = {
 export interface WebhookTrigger {
   id: string;
   name: string;
-  /** Shared secret the caller echoes in `x-md-webhook-secret`. Never logged. */
+  /** Shared secret the caller echoes in `x-md-webhook-secret`. Never logged.
+   *  Write-only over IPC: list reads return '' with hasSecret set; the value
+   *  only ever crosses renderer→main (mint/rotate). */
   secret: string;
+  /** Present on IPC reads: whether a secret is stored (the value never is). */
+  hasSecret?: boolean;
   enabled: boolean;
   mode: TriggerMode;
   /** User-editable JSON Schema (serialised) that inbound bodies are checked against. */
@@ -201,6 +205,8 @@ export const DEFAULT_WEBHOOK_SCHEMA = JSON.stringify(DEFAULT_WEBHOOK_SCHEMA_OBJE
  */
 export interface OrgTriggerConfig {
   apiKey: string;
+  /** Present on IPC reads: whether a key is stored (the value never crosses). */
+  hasApiKey?: boolean;
   enabled: boolean;
   mode: TriggerMode;
 }
@@ -210,6 +216,9 @@ export const DEFAULT_ORG_TRIGGER: OrgTriggerConfig = {
   enabled: false,
   mode: DEFAULT_TRIGGER_MODE
 };
+
+/** Org trigger as IPC reads serve it: key stripped, presence flagged. */
+export type RedactedOrgTrigger = Omit<OrgTriggerConfig, 'apiKey'> & { hasApiKey: boolean };
 
 /** Copy shown under the org key field. Kept here so Settings and Triggers agree. */
 export const CLONE_NODE_BLURB =

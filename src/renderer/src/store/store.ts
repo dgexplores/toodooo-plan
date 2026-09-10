@@ -268,7 +268,7 @@ interface State {
    *  mic button reactively (set by App on config load and by Settings on save). */
   freeflowEnabled: boolean;
   setFreeflowEnabled: (on: boolean) => void;
-  /** Mirror of `!!config.groqApiKey` — boolean presence ONLY; the key value never
+  /** Mirror of `config.hasGroqApiKey` — boolean presence ONLY; the key value never
    *  enters the store. Lets the composer show the voice button disabled (with a
    *  "add a Groq key" tooltip) instead of hiding it. Set by App on config load and
    *  by Settings on save. */

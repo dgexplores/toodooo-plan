@@ -15,6 +15,7 @@ import { initAutoUpdater, abortPendingRestart } from './updater';
 import { RealtimeFloorWatcher } from './realtimeFloorWatcher';
 import {
   readConfig, writeConfig, setAgentTokenCap, resetConfig, onConfigWritten, ensureHarnessHome, ensureClaudePermissionsAccepted,
+  redactConfigForRenderer,
   modelForRole, OPS_STANDUP_MISSION, HEARTBEAT_MISSION, COMPACT_MAINTENANCE_MISSION, type HarnessConfig, type ScheduledMission
 } from './config';
 import { listDir, readFileText, readFileBinary, writeFileText, statAbs, expandTilde } from './fs';
@@ -3182,7 +3183,10 @@ ipcMain.handle('integrations:test', async (_evt, payload: unknown) => {
 });
 
 // ─── IPC: config ────────────────────────────────────────────────────────────
-ipcMain.handle('config:get', (): HarnessConfig => readConfig());
+// Secret values NEVER cross to the renderer: the read returns presence
+// booleans (hasSlackBotToken…); secrets travel only renderer→main through
+// dedicated set-config handlers. See redactConfigForRenderer.
+ipcMain.handle('config:get', () => redactConfigForRenderer(readConfig()));
 ipcMain.handle('config:update', (_evt, patch: Partial<HarnessConfig>) => {
   // FIRST RUN: every hive-bound service is started by bootstrapHiveServices(),
   // which runs once at app-ready and early-returns on `!hive.enabled()` — i.e.
@@ -4185,7 +4189,11 @@ function sanitizeContextRule(patch: Partial<ContextRule> | undefined, current: C
 }
 
 // ─── IPC: Triggers — webhooks (many endpoints, one server, one tunnel) ──────
-ipcMain.handle('webhooks:list', () => readConfig().webhookTriggers ?? []);
+ipcMain.handle('webhooks:list', () => (readConfig().webhookTriggers ?? []).map((t) => ({
+  ...t,
+  secret: '',
+  hasSecret: typeof t.secret === 'string' && t.secret.length > 0
+})));
 ipcMain.handle('webhooks:save', (_evt, arg: unknown) => {
   const incoming = Array.isArray(arg) ? arg : [];
   const existing = readConfig().webhookTriggers ?? [];
@@ -4199,7 +4207,13 @@ ipcMain.handle('webhooks:save', (_evt, arg: unknown) => {
   }
   writeConfig({ webhookTriggers: list });
   reconcileWebhookServer();
-  return list;
+  // Reads never carry values (see webhooks:list): strip + flag here too, so
+  // the save round-trip can't repopulate the renderer mirror with secrets.
+  return list.map((t) => ({
+    ...t,
+    secret: '',
+    hasSecret: typeof t.secret === 'string' && t.secret.length > 0
+  }));
 });
 ipcMain.handle('webhooks:delete', (_evt, arg: unknown) => {
   const id = typeof arg === 'string' ? arg : '';
@@ -4208,7 +4222,11 @@ ipcMain.handle('webhooks:delete', (_evt, arg: unknown) => {
   // Revoking one endpoint must not disturb the others: the live server is
   // re-pointed, not restarted, so every remaining caller's URL keeps working.
   reconcileWebhookServer();
-  return list;
+  return list.map((t) => ({
+    ...t,
+    secret: '',
+    hasSecret: typeof t.secret === 'string' && t.secret.length > 0
+  }));
 });
 /** Mint a strong (256-bit) secret for the operator to paste into their caller.
  *  Not persisted here — it belongs to whichever endpoint the UI saves it onto. */
@@ -4252,7 +4270,13 @@ function isTriggerMode(v: unknown): v is TriggerMode {
 }
 
 // ─── IPC: Triggers — organisation (persistence only; no transport yet) ──────
-ipcMain.handle('org:getTrigger', () => readConfig().orgTrigger ?? DEFAULT_ORG_TRIGGER);
+// The apiKey is write-only: reads return hasApiKey, never the value.
+ipcMain.handle('org:getTrigger', () => {
+  const current = readConfig().orgTrigger ?? DEFAULT_ORG_TRIGGER;
+  const { apiKey: _k, ...rest } = current;
+  void _k;
+  return { ...rest, hasApiKey: typeof current.apiKey === 'string' && current.apiKey.length > 0 };
+});
 ipcMain.handle('org:setTrigger', (_evt, arg: unknown) => {
   const current = readConfig().orgTrigger ?? DEFAULT_ORG_TRIGGER;
   const p = (arg ?? {}) as Partial<OrgTriggerConfig>;
@@ -4265,7 +4289,11 @@ ipcMain.handle('org:setTrigger', (_evt, arg: unknown) => {
     mode: isTriggerMode(p.mode) ? p.mode : current.mode
   };
   writeConfig({ orgTrigger: next });
-  return next;
+  // Return redacted (presence, never the value) so the renderer mirror never
+  // retains a typed key past the save call.
+  const { apiKey: _k, ...rest } = next;
+  void _k;
+  return { ...rest, hasApiKey: next.apiKey.length > 0 };
 });
 
 // ─── IPC: Triggers — history ledger + the approval gate ─────────────────────

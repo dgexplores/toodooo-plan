@@ -17,10 +17,10 @@ export type { HookEvent } from '../shared/hookEvents';
 import type { LocalSkill, CatalogSkill } from '../main/skills';
 export type { LocalSkill, CatalogSkill } from '../main/skills';
 import type {
-  ContextRule, ContextTriggerConfig, OrgTriggerConfig, TriggerHistoryEntry, WebhookTrigger
+  ContextRule, ContextTriggerConfig, OrgTriggerConfig, RedactedOrgTrigger, TriggerHistoryEntry, WebhookTrigger
 } from '../shared/triggers';
 export type {
-  ContextRule, ContextTriggerConfig, OrgTriggerConfig, TriggerHistoryEntry, WebhookTrigger
+  ContextRule, ContextTriggerConfig, OrgTriggerConfig, RedactedOrgTrigger, TriggerHistoryEntry, WebhookTrigger
 } from '../shared/triggers';
 
 /** Renderer-visible integration record: the secretRef handle is redacted to a
@@ -291,18 +291,19 @@ export interface HarnessConfig {
    *  Mirrors main + renderer HarnessConfig. */
   telemetryEnabled?: boolean;
   slackEnabled?: boolean;
-  slackSigningSecret?: string;
-  slackBotToken?: string;
+  /** Write-only secrets: reads carry presence, never values (mirrors main). */
+  hasSlackSigningSecret?: boolean;
+  hasSlackBotToken?: boolean;
   slackChannelId?: string;
   slackPort?: number;
   slackProactivePosting?: boolean;
   webhookEnabled?: boolean;
-  webhookSecret?: string;
+  hasWebhookSecret?: boolean;
   webhookPort?: number;
   /** Free Flow voice dictation — master flag (default off), user Groq key, model.
    *  Entry point B (hold-Option-to-talk) is handled in the renderer, no hotkey. */
   freeflowEnabled?: boolean;
-  groqApiKey?: string;
+  hasGroqApiKey?: boolean;
   freeflowModel?: string;
   /** Realtime Michael voice loop — true ONLY while a session holds the mic
    *  (renderer session sets it at start()/stop()); the main mic permission gate
@@ -1236,8 +1237,8 @@ const api = {
   // ─── Triggers: organisation (clone-node peer messaging) ─────────────────────
   /** PERSISTENCE ONLY — the peer transport does not exist yet, so setting this
    *  stores the key and mode and starts nothing. */
-  getOrgTrigger: (): Promise<OrgTriggerConfig> => ipcRenderer.invoke('org:getTrigger'),
-  setOrgTrigger: (cfg: OrgTriggerConfig): Promise<OrgTriggerConfig> =>
+  getOrgTrigger: (): Promise<RedactedOrgTrigger> => ipcRenderer.invoke('org:getTrigger'),
+  setOrgTrigger: (cfg: OrgTriggerConfig): Promise<RedactedOrgTrigger> =>
     ipcRenderer.invoke('org:setTrigger', cfg),
 
   // ─── Triggers: history ledger + approval gate ───────────────────────────────

@@ -419,6 +419,40 @@ export interface HarnessConfig {
   reflectMinBytes?: number;
 }
 
+/** HarnessConfig as the renderer may see it: every secret VALUE replaced by a
+ *  presence boolean. Renderer XSS, voice-tool reads, or a compromised panel can
+ *  then at most learn THAT a key exists — never the key. Secrets travel only
+ *  renderer→main (dedicated set-config IPC), never main→renderer. */
+export interface RedactedHarnessConfig extends Omit<HarnessConfig,
+  'slackSigningSecret' | 'slackBotToken' | 'groqApiKey' | 'webhookSecret'> {
+  hasSlackSigningSecret: boolean;
+  hasSlackBotToken: boolean;
+  hasGroqApiKey: boolean;
+  hasWebhookSecret: boolean;
+}
+
+const nonEmptySecret = (v: unknown): boolean => typeof v === 'string' && v.trim().length > 0;
+
+/** Strip secret values for the renderer bridge. Pure, tested. The input object
+ *  is never mutated. */
+export function redactConfigForRenderer(c: HarnessConfig): RedactedHarnessConfig {
+  const {
+    slackSigningSecret: _ss,
+    slackBotToken: _sb,
+    groqApiKey: _gk,
+    webhookSecret: _ws,
+    ...rest
+  } = c;
+  void _ss; void _sb; void _gk; void _ws;
+  return {
+    ...rest,
+    hasSlackSigningSecret: nonEmptySecret(c.slackSigningSecret),
+    hasSlackBotToken: nonEmptySecret(c.slackBotToken),
+    hasGroqApiKey: nonEmptySecret(c.groqApiKey),
+    hasWebhookSecret: nonEmptySecret(c.webhookSecret)
+  };
+}
+
 const DEFAULTS: HarnessConfig = {
   onboardingComplete: false,
   harnessHome: null,

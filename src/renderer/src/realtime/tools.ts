@@ -10,9 +10,9 @@
  *
  * SECURITY: tools run in the RENDERER and only touch already-exposed read IPC.
  * The real OpenAI key never appears here (rt-1's mint keeps it main-only). And
- * get_config NEVER dumps HarnessConfig — that object carries secrets
- * (groqApiKey, slack/webhook tokens); we surface a hand-picked, non-sensitive
- * allowlist only.
+ * get_config NEVER dumps HarnessConfig — that object used to carry secrets
+ * (now redacted main-side to presence booleans); we surface a hand-picked,
+ * non-sensitive allowlist only.
  *
  * INTEGRATION (rt-2's src/renderer/src/realtime/session.ts — Jim's file):
  *   import { realtimeReadTools, realtimeSessionSummary } from './tools';
@@ -269,9 +269,11 @@ export function realtimeReadTools(): ReturnType<typeof tool>[] {
         spoken(async () => {
           const c = await window.cth.getConfig();
           // Hand-picked NON-SENSITIVE allowlist. Never iterate the object — it
-          // carries groqApiKey, slack/webhook tokens, and signing secrets. Read
-          // through obj() so the renderer's HarnessConfig mirror can lag the main
-          // one (it is hand-mirrored across three files) without breaking us.
+          // USED to carry groqApiKey, slack/webhook tokens, and signing secrets
+          // (now redacted main-side to presence booleans; the allowlist stays as
+          // defence in depth). Read through obj() so the renderer's HarnessConfig
+          // mirror can lag the main one (it is hand-mirrored across three files)
+          // without breaking us.
           const cc = obj(c);
           const parts: string[] = [];
           parts.push(`Autonomy mode is ${c.autoMode ? 'on' : 'off'}.`);
