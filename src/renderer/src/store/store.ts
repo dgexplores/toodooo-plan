@@ -53,6 +53,8 @@ export interface Agent {
   tmuxTarget: string;
   cwd: string;
   goal?: string;
+  /** Paying client key (cost attribution; registry truth via hiveSetClientKey). */
+  clientKey?: string;
   /** User-authored private note shown and edited from the roster-card hover. */
   note?: string;
   status: StatusKind;

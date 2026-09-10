@@ -42,6 +42,7 @@ export function EditAgentModal({ agent, onClose }: EditAgentModalProps) {
   const [model, setModel] = useState<string | undefined>(agent.model);
   const [description, setDescription] = useState(agent.description);
   const [goal, setGoal] = useState(agent.goal ?? '');
+  const [clientKey, setClientKey] = useState(agent.clientKey ?? '');
 
   useEffect(() => {
     void window.cth.getConfig().then(setConfig).catch(() => setConfig(null));
@@ -56,6 +57,7 @@ export function EditAgentModal({ agent, onClose }: EditAgentModalProps) {
     setModel(agent.model);
     setDescription(agent.description);
     setGoal(agent.goal ?? '');
+    setClientKey(agent.clientKey ?? '');
   }, [agent.id]);
 
   const pickProvider = (id: AgentProvider) => {
@@ -86,8 +88,11 @@ export function EditAgentModal({ agent, onClose }: EditAgentModalProps) {
       model,
       command,
       description: trimmedDescription,
-      goal: trimmedGoal || undefined
+      goal: trimmedGoal || undefined,
+      clientKey: clientKey.trim() || undefined
     });
+    // Registry truth for cost attribution (ledger stamps the key at write).
+    void window.cth.hiveSetClientKey(agent.id, clientKey.trim()).catch(() => { /* toastless: mirror already updated */ });
     onClose();
   };
 
@@ -274,6 +279,15 @@ export function EditAgentModal({ agent, onClose }: EditAgentModalProps) {
                   placeholder="long-running directive injected on every prompt"
                   rows={4}
                   style={{ ...inputStyle, fontFamily: 'var(--cth-font-ui)', resize: 'vertical', minHeight: 200 }}
+                />
+              </Row>
+
+              <Row label="Client (optional)">
+                <input
+                  value={clientKey}
+                  onChange={(e) => setClientKey(e.target.value)}
+                  placeholder="who pays — attributes ledger rows from now on"
+                  style={inputStyle}
                 />
               </Row>
             </Section>
