@@ -12,6 +12,41 @@ import {
 import { defaultMcpDefaults } from '../shared/mcpCatalog';
 import { MAX_AGENT_TOKEN_CAP } from '../shared/tokenCaps';
 import { expandTilde, normalizeHiveHome } from './fs';
+import { vaultGet, vaultSet, vaultRemove, type VaultKey } from './secretVault';
+
+/** A config secret by key: vault first, legacy plaintext config as fallback
+ *  (pre-migration homes and machines without keychain encryption). */
+export function getSecret(key: VaultKey): string | undefined {
+  try {
+    const v = vaultGet(key);
+    if (v) return v;
+  } catch { /* fall through to legacy */ }
+  try {
+    const f = (readConfig() as unknown as Record<string, unknown>)[key];
+    return typeof f === 'string' && f ? f : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Store a config secret: vault when encryption is available (clearing any
+ *  legacy plaintext copy), legacy config otherwise (documented degradation —
+ *  same as today, never worse). Empty/null REMOVES from both stores. */
+export function saveSecret(key: VaultKey, value: string | null | undefined): void {
+  const v = typeof value === 'string' ? value.trim() : '';
+  if (v) {
+    if (vaultSet(key, v)) {
+      writeConfig({ [key]: undefined } as Partial<HarnessConfig>);
+      return;
+    }
+    writeConfig({ [key]: v } as Partial<HarnessConfig>);
+    return;
+  }
+  try {
+    vaultRemove(key);
+  } catch { /* best-effort */ }
+  writeConfig({ [key]: undefined } as Partial<HarnessConfig>);
+}
 import type { IntegrationRecord } from '../shared/integrations';
 import {
   DEFAULT_CONTEXT_TRIGGER,
@@ -444,12 +479,20 @@ export function redactConfigForRenderer(c: HarnessConfig): RedactedHarnessConfig
     ...rest
   } = c;
   void _ss; void _sb; void _gk; void _ws;
+  // Presence consults the vault first: a migrated secret lives only there.
+  const has = (k: VaultKey, fallback: unknown): boolean => {
+    try {
+      const v = vaultGet(k);
+      if (v) return true;
+    } catch { /* fall through to legacy field */ }
+    return nonEmptySecret(fallback);
+  };
   return {
     ...rest,
-    hasSlackSigningSecret: nonEmptySecret(c.slackSigningSecret),
-    hasSlackBotToken: nonEmptySecret(c.slackBotToken),
-    hasGroqApiKey: nonEmptySecret(c.groqApiKey),
-    hasWebhookSecret: nonEmptySecret(c.webhookSecret)
+    hasSlackSigningSecret: has('slackSigningSecret', c.slackSigningSecret),
+    hasSlackBotToken: has('slackBotToken', c.slackBotToken),
+    hasGroqApiKey: has('groqApiKey', c.groqApiKey),
+    hasWebhookSecret: has('webhookSecret', c.webhookSecret)
   };
 }
 

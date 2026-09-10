@@ -14,10 +14,11 @@ import { resolveCommand as resolveCliCommand, isSafeCommandName, prewarmUserShel
 import { initAutoUpdater, abortPendingRestart } from './updater';
 import { RealtimeFloorWatcher } from './realtimeFloorWatcher';
 import {
-  readConfig, writeConfig, setAgentTokenCap, resetConfig, onConfigWritten, ensureHarnessHome, ensureClaudePermissionsAccepted,
+  readConfig, writeConfig, setAgentTokenCap, resetConfig, onConfigWritten, ensureHarnessHome, ensureClaudePermissionsAccepted, getSecret, saveSecret,
   redactConfigForRenderer,
   modelForRole, OPS_STANDUP_MISSION, HEARTBEAT_MISSION, COMPACT_MAINTENANCE_MISSION, type HarnessConfig, type ScheduledMission
 } from './config';
+import { initVault, migrateConfigSecrets, type VaultKey } from './secretVault';
 import { listDir, readFileText, readFileBinary, writeFileText, statAbs, expandTilde } from './fs';
 import { normalizeWeekly, weeklyDelayMs } from '../shared/weeklySchedule';
 import {
@@ -1591,7 +1592,7 @@ function slackDoneSummary(task: HiveTask): string {
  *  never throw into the timer, and the bot token never leaves this function. */
 async function pollSlackDoneTasks(): Promise<void> {
   if (slackDonePolling) return;
-  const botToken = readConfig().slackBotToken;
+  const botToken = getSecret('slackBotToken');
   if (!botToken) return; // can't post without the token — nothing to do
   let tasks: HiveTask[];
   try {
@@ -1668,13 +1669,13 @@ function stopSlackDoneObserver(): void {
  *  disabled or the signing secret is unset. */
 async function startSlackServer(): Promise<{ ok: boolean; url?: string; error?: string }> {
   const cfg = readConfig();
-  if (!cfg.slackEnabled || !cfg.slackSigningSecret) {
+  if (!cfg.slackEnabled || !getSecret('slackSigningSecret')) {
     return { ok: false, error: 'slack disabled or missing signing secret' };
   }
   slackServer?.stop();
   slackServer = new SlackWebhookServer({
     port: cfg.slackPort && cfg.slackPort > 0 ? cfg.slackPort : 3847,
-    signingSecret: cfg.slackSigningSecret,
+    signingSecret: getSecret('slackSigningSecret') ?? '',
     channelId: cfg.slackChannelId,
     // Fires from the HTTP server's event loop (not the IPC thread); route through
     // liveWebContents() so a message arriving during window teardown can't throw.
@@ -1682,7 +1683,7 @@ async function startSlackServer(): Promise<{ ok: boolean; url?: string; error?: 
     onMessage: async (m) => {
       const localFiles = await downloadSlackFiles(
         m._rawFiles ?? [],
-        readConfig().slackBotToken
+        getSecret('slackBotToken')
       );
       // `text` stays the user's RAW Slack text → drives the readable kanban card
       // title. `autonomyPreamble` is the authoritative policy block the renderer
@@ -1724,7 +1725,7 @@ async function startSlackReplyServer(): Promise<void> {
   const token = randomBytes(24).toString('hex');
   slackReplyServer = new SlackReplyServer({
     token,
-    getBotToken: () => readConfig().slackBotToken,
+    getBotToken: () => getSecret('slackBotToken'),
     // An agent posted a DIRECT substantive reply into this thread → record it so the
     // done-summary poller skips it (the poller is a fallback, not a duplicator).
     onReplied: (thread_ts) => { directlyRepliedThreads.add(thread_ts); }
@@ -3297,7 +3298,7 @@ ipcMain.handle('config:changeHome', async (_evt, payload: unknown) => {
       // repointed) so the user loses nothing, and surface the error — no relaunch.
       bootstrapHiveServices();
       const cfg = readConfig();
-      if (cfg.slackEnabled && cfg.slackSigningSecret) void startSlackServer();
+      if (cfg.slackEnabled && getSecret('slackSigningSecret')) void startSlackServer();
       reconcileWebhookServer();
       return { ok: false, error: `Could not copy data: ${e instanceof Error ? e.message : String(e)}` };
     }
@@ -4120,7 +4121,7 @@ ipcMain.handle('slack:reply', (_evt, arg: unknown) => {
   // round-trip (done-poller) and an agent's own direct /reply are NOT routed
   // through here, so they are unaffected and always stay on.
   if (!cfg.slackProactivePosting) return { ok: false, error: 'app-initiated Slack posting disabled (enable in Settings → Slack)' };
-  const botToken = cfg.slackBotToken;
+  const botToken = getSecret('slackBotToken');
   if (!botToken) return { ok: false, error: 'no bot token' };
   if (typeof p.channel !== 'string' || typeof p.thread_ts !== 'string' || typeof p.text !== 'string') {
     return { ok: false, error: 'channel, thread_ts, text required' };
@@ -4139,9 +4140,9 @@ ipcMain.handle('slack:setConfig', (_evt, patch: unknown) => {
     proactivePosting?: unknown;
   };
   const next: Partial<HarnessConfig> = {};
-  // Trim string fields; an emptied field clears back to undefined.
-  if (typeof p.signingSecret === 'string') next.slackSigningSecret = p.signingSecret.trim() || undefined;
-  if (typeof p.botToken === 'string') next.slackBotToken = p.botToken.trim() || undefined;
+  // Secrets are vault-first (empty clears both stores); never persist here.
+  if (typeof p.signingSecret === 'string') saveSecret('slackSigningSecret', p.signingSecret);
+  if (typeof p.botToken === 'string') saveSecret('slackBotToken', p.botToken);
   if (typeof p.channelId === 'string') next.slackChannelId = p.channelId.trim() || undefined;
   if (typeof p.port === 'number' && Number.isFinite(p.port)) next.slackPort = p.port;
   if (typeof p.enabled === 'boolean') next.slackEnabled = p.enabled;
@@ -4151,7 +4152,7 @@ ipcMain.handle('slack:setConfig', (_evt, patch: unknown) => {
   // deliberately do NOT auto-(re)start here — the user presses Start in Settings
   // to fetch the fresh (ephemeral) tunnel URL.
   const cfg = readConfig();
-  if (!cfg.slackEnabled || !cfg.slackSigningSecret) stopSlackServer();
+  if (!cfg.slackEnabled || !getSecret('slackSigningSecret')) stopSlackServer();
   return { ok: true };
 });
 
@@ -4361,14 +4362,14 @@ ipcMain.handle('webhook:status', () => ({ running: webhookServer != null, url: l
  *  it for the user to copy into their client. The previous secret is replaced. */
 ipcMain.handle('webhook:generateSecret', () => {
   const secret = randomBytes(32).toString('hex');
-  writeConfig({ webhookSecret: secret });
+  saveSecret('webhookSecret', secret);
   upsertLegacyWebhookTrigger({ secret });
   return { ok: true, secret };
 });
 ipcMain.handle('webhook:setConfig', (_evt, patch: unknown) => {
   const p = (patch ?? {}) as { secret?: unknown; port?: unknown; enabled?: unknown };
   const next: Partial<HarnessConfig> = {};
-  if (typeof p.secret === 'string') next.webhookSecret = p.secret.trim() || undefined;
+  if (typeof p.secret === 'string') saveSecret('webhookSecret', p.secret);
   if (typeof p.port === 'number' && Number.isFinite(p.port)) next.webhookPort = p.port;
   if (typeof p.enabled === 'boolean') next.webhookEnabled = p.enabled;
   writeConfig(next);
@@ -4417,7 +4418,7 @@ ipcMain.handle('freeflow:setConfig', (_evt, patch: unknown) => {
   const next: Partial<HarnessConfig> = {};
   if (typeof p.enabled === 'boolean') next.freeflowEnabled = p.enabled;
   // Trim string fields; an emptied key clears back to undefined.
-  if (typeof p.apiKey === 'string') next.groqApiKey = p.apiKey.trim() || undefined;
+  if (typeof p.apiKey === 'string') saveSecret('groqApiKey', p.apiKey);
   if (typeof p.model === 'string') next.freeflowModel = p.model.trim() || DEFAULT_GROQ_MODEL;
   writeConfig(next);
   return { ok: true };
@@ -4429,13 +4430,13 @@ ipcMain.handle('freeflow:setConfig', (_evt, patch: unknown) => {
 ipcMain.handle('freeflow:transcribe', async (_evt, arg: unknown) => {
   const cfg = readConfig();
   if (!cfg.freeflowEnabled) return { ok: false, error: 'Free Flow is disabled' };
-  if (!cfg.groqApiKey) return { ok: false, error: 'no Groq API key set' };
+  if (!getSecret('groqApiKey')) return { ok: false, error: 'no Groq API key set' };
   const a = (arg ?? {}) as { audio?: unknown; mimeType?: unknown; filename?: unknown; language?: unknown };
   if (!(a.audio instanceof ArrayBuffer) && !(a.audio instanceof Uint8Array)) {
     return { ok: false, error: 'no audio' };
   }
   const out = await transcribeWithGroq({
-    apiKey: cfg.groqApiKey,
+    apiKey: getSecret('groqApiKey') ?? '',
     audio: a.audio,
     mimeType: typeof a.mimeType === 'string' ? a.mimeType : undefined,
     filename: typeof a.filename === 'string' ? a.filename : undefined,
@@ -5350,6 +5351,23 @@ app.whenReady().then(() => {
   // Guarded: a DB failure (e.g. a bad native build) must degrade to defaults,
   // never block app startup.
   try { persist.open(); } catch (e) { console.error('[db] open failed:', e); }
+  // Config-secret vault (B-020): encrypted home for the scalar secrets, then a
+  // one-way migration of any legacy plaintext out of config.json (verified
+  // before clearing; no-encryption machines keep the legacy path untouched).
+  try {
+    initVault(app.getPath('userData'));
+    const moved = migrateConfigSecrets(
+      () => readConfig() as unknown as Partial<Record<VaultKey, unknown>>,
+      (keys) => {
+        const patch: Record<string, undefined> = {};
+        for (const k of keys) patch[k] = undefined;
+        writeConfig(patch as Partial<HarnessConfig>);
+      }
+    );
+    if (moved.moved.length > 0 || moved.keptPlaintext.length > 0) {
+      hive.appendLog({ kind: 'vault-migrate', moved: moved.moved, keptPlaintext: moved.keptPlaintext });
+    }
+  } catch (e) { console.error('[vault] init/migrate failed:', e); }
   // Warm the login-shell PATH cache off the critical path: the first spawn
   // must never pay the ~1s interactive-shell cost on the main thread (B-011).
   prewarmUserShell();
@@ -5382,7 +5400,7 @@ app.whenReady().then(() => {
   // failure (offline) is logged, not fatal. The tunnel URL is ephemeral and
   // changes per restart, so the user re-pastes it via Settings → Start.
   const slackCfg = readConfig();
-  if (slackCfg.slackEnabled && slackCfg.slackSigningSecret) {
+  if (slackCfg.slackEnabled && getSecret('slackSigningSecret')) {
     void startSlackServer().then((r) => {
       if (!r.ok) console.error('[slack] auto-start failed:', r.error);
       else console.log('[slack] webhook listening', r.url ? `(tunnel: ${r.url})` : '(no tunnel)');
