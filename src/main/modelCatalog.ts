@@ -17,7 +17,8 @@ import { getText } from './fetchText';
 import { parseModelCatalog, type ModelCatalog } from '../shared/modelCatalogPayload';
 
 const CATALOG_URL =
-  'https://raw.githubusercontent.com/chaitanyagiri/munder-difflin/main/docs/model-catalog.json';
+  // Pinned to our work branch until the code merges to main — then drop the branch segment.
+  'https://raw.githubusercontent.com/dgexplores/toodooo-plan/improve/india-ready/docs/model-catalog.json';
 
 /** Models ship on a human timescale, and a stale list costs the user nothing —
  *  every command field in the app stays editable. Six hours matches the hero

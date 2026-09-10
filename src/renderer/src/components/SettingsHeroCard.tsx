@@ -29,8 +29,8 @@ import { Icon } from './Icon';
 import { DEFAULT_HERO, type HeroPayload } from '@shared/heroPayload';
 import { manualDownloadUrl, pendingVersion, reduceStatus, type UpdateStatus } from '@shared/updateState';
 
-const GITHUB_REPO_URL = 'https://github.com/chaitanyagiri/munder-difflin';
-const FOUNDERS_WALL_URL = 'https://munderdiffl.in/wall.html';
+const GITHUB_REPO_URL = 'https://github.com/chaitanyagiri/toodooo';
+const FOUNDERS_WALL_URL = 'https://github.com/dgexplores/toodooo-plan/wall.html';
 const DISCORD_URL = 'https://discord.gg/SEDzP5ZPk5';
 
 export function SettingsHeroCard() {
