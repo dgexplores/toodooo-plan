@@ -14,6 +14,7 @@ import {
 import { PixelPanel } from './PixelPanel';
 import { PixelButton } from './PixelButton';
 import { UpdatesSection } from './UpdatesSection';
+import { WhatsAppSettings } from './WhatsAppSettings';
 import { SettingsHeroCard } from './SettingsHeroCard';
 import { SetupPanel } from './SetupPanel';
 import { Icon } from './Icon';
@@ -1678,6 +1679,10 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                           </div>
                         )}
                       </div>
+
+                      <div style={sectionRule} />
+
+                      <WhatsAppSettings />
 
                       <div style={sectionRule} />
 

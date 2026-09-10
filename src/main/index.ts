@@ -4115,6 +4115,7 @@ ipcMain.handle('slack:status', () => ({ running: slackServer != null, url: lastS
 // deliberate act. Inbound text routes to god with sender provenance; replies
 // go through whatsapp:send (vault phone token, main-only).
 let whatsappServer: WhatsAppServer | null = null;
+let lastWhatsappUrl: string | null = null;
 
 async function startWhatsAppServer(): Promise<{ ok: boolean; port?: number; error?: string }> {
   const cfg = readConfig();
@@ -4149,18 +4150,26 @@ async function startWhatsAppServer(): Promise<{ ok: boolean; port?: number; erro
   );
   const res = await whatsappServer.start();
   if (!res.ok) whatsappServer = null;
+  // Tunnel is best-effort (Meta needs it; loopback stays live regardless).
+  if (res.ok) {
+    try {
+      const url = await whatsappServer?.openTunnel();
+      if (url) lastWhatsappUrl = url;
+    } catch { /* tunnel unavailable — local handler still live */ }
+  }
   return res;
 }
 
 ipcMain.handle('whatsapp:start', () => startWhatsAppServer());
-ipcMain.handle('whatsapp:stop', () => {
+ipcMain.handle('whatsapp:stop', async () => {
   try {
-    whatsappServer?.stop();
+    await whatsappServer?.stop();
   } catch { /* best-effort */ }
   whatsappServer = null;
+  lastWhatsappUrl = null;
   return { ok: true };
 });
-ipcMain.handle('whatsapp:status', () => ({ running: whatsappServer != null }));
+ipcMain.handle('whatsapp:status', () => ({ running: whatsappServer != null, url: lastWhatsappUrl }));
 ipcMain.handle('whatsapp:setConfig', (_evt, arg: unknown) => {
   const p = (arg ?? {}) as {
     enabled?: unknown; phoneNumberId?: unknown; allowlist?: unknown; port?: unknown;

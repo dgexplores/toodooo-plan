@@ -1167,8 +1167,8 @@ const api = {
   /** Stop the WhatsApp inbound server. */
   whatsappStop: (): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke('whatsapp:stop'),
-  /** Whether the WhatsApp server is running. */
-  whatsappStatus: (): Promise<{ running: boolean }> =>
+  /** Whether the WhatsApp server is running (+ tunnel URL for Meta). */
+  whatsappStatus: (): Promise<{ running: boolean; url?: string | null }> =>
     ipcRenderer.invoke('whatsapp:status'),
   /** Persist WhatsApp routing config; secrets vault-first (empty clears). */
   whatsappSetConfig: (patch: {

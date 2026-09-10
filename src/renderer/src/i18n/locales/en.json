@@ -345,7 +345,21 @@
       "orgKeyDesc": "How a teammate's install addresses yours.",
       "apiKey": "API key",
       "orgKeyPlaceholder": "paste your organisation key",
-      "orgConfigOnly": "Configuration only for now. The organisation messaging service does not exist yet, so a key here starts no transport — it is saved, shown in the Triggers tab, and waits."
+      "orgConfigOnly": "Configuration only for now. The organisation messaging service does not exist yet, so a key here starts no transport — it is saved, shown in the Triggers tab, and waits.",
+      "whatsapp": "WhatsApp",
+      "whatsappDesc": "Pipe WhatsApp messages straight into god's queue (Meta Cloud API, free tier). Start the server, paste the tunnel URL into your Meta app.",
+      "whatsappPhoneId": "Business phone_number_id",
+      "whatsappPort": "Port",
+      "whatsappAllowlist": "Sender allowlist (WA ids, comma-separated)",
+      "whatsappAllowlistPh": "919999999999, 918888888888 — empty allows nobody",
+      "whatsappVerifyToken": "Verify token",
+      "whatsappAppSecret": "App secret",
+      "whatsappPhoneToken": "Phone token (for replies)",
+      "whatsappSaveSecrets": "Save secrets",
+      "whatsappNothingTyped": "nothing typed — secrets unchanged",
+      "startedNoTunnel": "started, but tunnel unavailable",
+      "startFailed": "failed to start",
+      "cleared": "cleared"
     },
     "voice": {
       "freeFlow": "Free Flow",

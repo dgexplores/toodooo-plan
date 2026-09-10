@@ -9,6 +9,10 @@
  */
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { isAllowed, parseInbound, verifyChallenge, verifySignature } from './whatsapp';
+// NOTE: `tunnelmole` is ESM-only; the main process bundles as CJS, so it is
+// imported dynamically inside openTunnel (mirrors slack.ts) — never hoisted.
+
+const TUNNEL_START_TIMEOUT_MS = 10_000;
 
 const MAX_BODY_BYTES = 256 * 1024;
 const DEDUPE_KEEP = 50;
@@ -29,6 +33,7 @@ export class WhatsAppServer {
   private server: Server | null = null;
   private seen: string[] = [];
   private boundPort = 0;
+  private tunnelUrl: string | null = null;
 
   constructor(
     private secrets: () => WhatsAppServerSecrets,
@@ -61,16 +66,41 @@ export class WhatsAppServer {
     return { ok: true, port: this.boundPort };
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
     try {
       this.server?.close();
     } catch { /* best-effort */ }
     this.server = null;
     this.boundPort = 0;
+    this.tunnelUrl = null;
   }
 
   get running(): boolean {
     return this.server !== null;
+  }
+
+  get url(): string | null {
+    return this.tunnelUrl;
+  }
+
+  /** Open the public tunnel Meta must reach. Best-effort: a failed tunnel
+   *  leaves the loopback handler live (same posture as the Slack server). */
+  async openTunnel(): Promise<string | null> {
+    if (!this.server) return null;
+    try {
+      const { tunnelmole } = await import('tunnelmole');
+      const url = await new Promise<string>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('timed out')), TUNNEL_START_TIMEOUT_MS);
+        tunnelmole({ port: this.boundPort })
+          .then((u) => { clearTimeout(timer); resolve(u); })
+          .catch((e) => { clearTimeout(timer); reject(e); });
+      });
+      if (!url) return null;
+      this.tunnelUrl = url;
+      return url;
+    } catch {
+      return null;
+    }
   }
 
   private async route(req: IncomingMessage, res: ServerResponse): Promise<void> {
