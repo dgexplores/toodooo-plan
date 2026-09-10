@@ -7,7 +7,12 @@ acceptance line; nothing here is aspirational filler.
 - **R-01** Hindi (`hi`) + Hinglish tone option ship in v1; ✅ PARTIAL (chrome sections + ratchet shipped, expansion ongoing) zero English
   fallback strings (CI asserts key parity across locales).
 - **R-02** Never auto-detect OS locale (explicit choice; learnt from upstream).
-- **R-03** Agent-facing prompts (orientation, receipts) available in Hindi;
+- **R-03** Agent-facing prompts available in Hindi → DECIDED (narrowed): Hindi UI chrome
+  (shipped, ratcheting) + brief-in-any-language (models are multilingual — verified
+  by construction, no code needed). The injected SYSTEM prompt stays English
+  deliberately: translating 1500+ lines of coordination instructions risks agent
+  reliability for zero measured need, and forks every future prompt edit into two
+  languages. Revisit only with evidence owners actually hit a language wall.
   owner picks per-agent language.
 - **R-04** 1409-string translation burden handled by namespaced lazy-loaded
   locale files + parity test, not one giant JSON.
