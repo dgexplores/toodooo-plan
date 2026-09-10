@@ -64,11 +64,15 @@ jobs:
       # NOTE: --ignore-scripts is deliberate. The repo postinstall rebuilds
       # natives for the ELECTRON ABI, which plain node cannot load — and on
       # Windows runners the rebuild toolchain detection fails outright (node-gyp
-      # cannot find VS there; `npm ci` itself errors). The smoke probes the
-      # SHIPPED prebuilds under plain node instead, which is exactly what the
-      # packaged app must survive. The Electron-ABI rebuild path stays covered
-      # by the Build job + postinstall on dev machines.
+      # cannot find VS there; `npm ci` itself errors). Verified instead:
+      # better-sqlite3 ships NO prebuilds and node-pty ships none for linux,
+      # so every platform compiles for PLAIN node here (ubuntu/macOS toolchains
+      # are preinstalled; Windows uses its VS2022 via npm's node-gyp). The
+      # Electron-ABI rebuild path stays covered by the Build job + postinstall
+      # on dev machines.
       - name: Install dependencies (no postinstall rebuild)
         run: npm ci --ignore-scripts
+      - name: Compile natives for plain node
+        run: npm rebuild node-pty better-sqlite3
       - name: PTY smoke (natives + round-trip + exit)
         run: npm run smoke
