@@ -38,6 +38,8 @@ import { PersistStore } from './db';
 import { readAgentUsage, readContextTokens, seedSessionTranscript, resolveSessionCwd } from './transcript';
 import { listIssues, listCIRuns } from './github';
 import { SlackWebhookServer, SlackReplyServer, postSlackReply, type SlackEventFile } from './slack';
+import { WhatsAppServer } from './whatsappServer';
+import { sendText as sendWhatsAppText } from './whatsapp';
 import {
   WebhookServer,
   type WebhookDispatch, type WebhookEndpointRef, type WebhookInbound, type WebhookTaskStatus
@@ -4107,6 +4109,86 @@ ipcMain.handle('slack:stop', () => {
 /** Current connection state + last Request URL — lets Settings hydrate the
  *  "Connected" badge and re-show the persisted tunnel URL on reopen. */
 ipcMain.handle('slack:status', () => ({ running: slackServer != null, url: lastSlackUrl }));
+
+// ─── WhatsApp → god's queue (Cloud API, free tier) ──────────────────────────
+// Explicit Start only (never on boot): a public inbound surface must be a
+// deliberate act. Inbound text routes to god with sender provenance; replies
+// go through whatsapp:send (vault phone token, main-only).
+let whatsappServer: WhatsAppServer | null = null;
+
+async function startWhatsAppServer(): Promise<{ ok: boolean; port?: number; error?: string }> {
+  const cfg = readConfig();
+  if (!cfg.whatsapp?.enabled) return { ok: false, error: 'whatsapp disabled' };
+  const verifyToken = getSecret('whatsappVerifyToken');
+  const appSecret = getSecret('whatsappAppSecret');
+  if (!verifyToken || !appSecret) {
+    return { ok: false, error: 'whatsapp secrets not configured' };
+  }
+  whatsappServer?.stop();
+  whatsappServer = new WhatsAppServer(
+    () => ({ verifyToken, appSecret }),
+    {
+      port: cfg.whatsapp.port && cfg.whatsapp.port > 0 ? cfg.whatsapp.port : 3851,
+      allowlist: cfg.whatsapp.allowlist ?? [],
+      onMessage: (m) => {
+        hive.send(
+          {
+            to: 'god',
+            act: 'request',
+            subject: `WhatsApp from ${m.from}`,
+            body: m.text
+          },
+          `whatsapp:${m.from}`
+        );
+        hive.appendLog({ kind: 'whatsapp-in', from: m.from, id: m.messageId });
+      },
+      onSkip: (reasons) => {
+        hive.appendLog({ kind: 'whatsapp-skip', reasons });
+      }
+    }
+  );
+  const res = await whatsappServer.start();
+  if (!res.ok) whatsappServer = null;
+  return res;
+}
+
+ipcMain.handle('whatsapp:start', () => startWhatsAppServer());
+ipcMain.handle('whatsapp:stop', () => {
+  try {
+    whatsappServer?.stop();
+  } catch { /* best-effort */ }
+  whatsappServer = null;
+  return { ok: true };
+});
+ipcMain.handle('whatsapp:status', () => ({ running: whatsappServer != null }));
+ipcMain.handle('whatsapp:setConfig', (_evt, arg: unknown) => {
+  const p = (arg ?? {}) as {
+    enabled?: unknown; phoneNumberId?: unknown; allowlist?: unknown; port?: unknown;
+    verifyToken?: unknown; appSecret?: unknown; phoneToken?: unknown;
+  };
+  const next = { ...(readConfig().whatsapp ?? {}) };
+  if (typeof p.enabled === 'boolean') next.enabled = p.enabled;
+  if (typeof p.phoneNumberId === 'string') next.phoneNumberId = p.phoneNumberId.trim();
+  if (typeof p.port === 'number' && Number.isFinite(p.port)) next.port = p.port;
+  if (Array.isArray(p.allowlist)) {
+    next.allowlist = p.allowlist.filter((x): x is string => typeof x === 'string' && x.trim().length > 0).slice(0, 100);
+  }
+  // Secrets are vault-first (empty clears both stores); never persist here.
+  if (typeof p.verifyToken === 'string') saveSecret('whatsappVerifyToken', p.verifyToken);
+  if (typeof p.appSecret === 'string') saveSecret('whatsappAppSecret', p.appSecret);
+  if (typeof p.phoneToken === 'string') saveSecret('whatsappPhoneToken', p.phoneToken);
+  writeConfig({ whatsapp: next });
+  return { ok: true };
+});
+ipcMain.handle('whatsapp:send', async (_evt, arg: unknown) => {
+  const p = (arg ?? {}) as { to?: unknown; text?: unknown };
+  const cfg = readConfig();
+  const phoneToken = getSecret('whatsappPhoneToken');
+  const phoneNumberId = cfg.whatsapp?.phoneNumberId;
+  if (!phoneToken || !phoneNumberId) return { ok: false, error: 'whatsapp reply not configured' };
+  if (typeof p.to !== 'string' || typeof p.text !== 'string') return { ok: false, error: 'to/text required' };
+  return sendWhatsAppText({ phoneNumberId, token: phoneToken, to: p.to, text: p.text });
+});
 /** Absolute path to the bundled reply helper, for the prompt the office worker
  *  runs to post its summary back in-thread. No secret crosses this boundary. */
 ipcMain.handle('slack:replyScriptPath', () => slackReplyScriptPath());

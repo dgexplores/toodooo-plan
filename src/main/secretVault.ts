@@ -19,7 +19,10 @@ export const VAULT_KEYS = [
   'slackSigningSecret',
   'slackBotToken',
   'groqApiKey',
-  'webhookSecret'
+  'webhookSecret',
+  'whatsappVerifyToken',
+  'whatsappAppSecret',
+  'whatsappPhoneToken'
 ] as const;
 
 export type VaultKey = (typeof VAULT_KEYS)[number];

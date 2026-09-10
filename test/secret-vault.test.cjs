@@ -32,6 +32,14 @@ require.cache[electron] = {
 
 const vault = loadTs('src/main/secretVault.ts');
 
+test('vault covers the whatsapp trio alongside the original four', () => {
+  const { VAULT_KEYS } = vault;
+  for (const k of ['slackSigningSecret', 'slackBotToken', 'groqApiKey', 'webhookSecret',
+    'whatsappVerifyToken', 'whatsappAppSecret', 'whatsappPhoneToken']) {
+    assert.ok(VAULT_KEYS.includes(k), `vault must cover ${k}`);
+  }
+});
+
 function tmpDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'md-vault-'));
 }

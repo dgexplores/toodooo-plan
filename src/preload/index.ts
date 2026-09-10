@@ -1159,6 +1159,26 @@ const api = {
   /** Stop the Slack webhook server + tunnel. */
   slackStop: (): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke('slack:stop'),
+  // ─── WhatsApp → god's queue (tunnel + Settings panel arrive next slice;
+  // server binds loopback now, secrets stay vaulted main-side) ───
+  /** Start the WhatsApp inbound server (explicit Start only, never on boot). */
+  whatsappStart: (): Promise<{ ok: boolean; port?: number; error?: string }> =>
+    ipcRenderer.invoke('whatsapp:start'),
+  /** Stop the WhatsApp inbound server. */
+  whatsappStop: (): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke('whatsapp:stop'),
+  /** Whether the WhatsApp server is running. */
+  whatsappStatus: (): Promise<{ running: boolean }> =>
+    ipcRenderer.invoke('whatsapp:status'),
+  /** Persist WhatsApp routing config; secrets vault-first (empty clears). */
+  whatsappSetConfig: (patch: {
+    enabled?: boolean; phoneNumberId?: string; allowlist?: string[]; port?: number;
+    verifyToken?: string; appSecret?: string; phoneToken?: string;
+  }): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke('whatsapp:setConfig', patch),
+  /** Reply to a sender (vault phone token, main-only). */
+  whatsappSend: (msg: { to: string; text: string }): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke('whatsapp:send', msg),
   /** Current connection state + last Request URL (so Settings can hydrate the
    *  "Connected" badge and re-show the persisted tunnel URL on reopen). */
   slackStatus: (): Promise<{ running: boolean; url?: string }> =>

@@ -362,6 +362,18 @@ export interface HarnessConfig {
   providerDefaultModels?: Partial<Record<AgentProvider, string>>;
   /** Master toggle for the Slack → Michael's-queue integration. */
   slackEnabled?: boolean;
+  /** WhatsApp → god's-queue integration (Cloud API, free tier). Secrets live
+   *  in the vault (whatsappVerifyToken/AppSecret/PhoneToken); only routing
+   *  config lives here. Server starts on explicit Start, never on boot. */
+  whatsapp?: {
+    enabled?: boolean;
+    /** Meta business phone_number_id for replies. */
+    phoneNumberId?: string;
+    /** Sender allowlist (WA ids). Empty = nobody (fail closed). */
+    allowlist?: string[];
+    /** Loopback bind port (default 3851). */
+    port?: number;
+  };
   /** Slack app signing secret (Basic Information → Signing Secret). Never logged. */
   slackSigningSecret?: string;
   /** Bot token (xoxb-…) — only needed if the bot ever replies; optional for now. */
@@ -464,6 +476,8 @@ export interface RedactedHarnessConfig extends Omit<HarnessConfig,
   hasSlackBotToken: boolean;
   hasGroqApiKey: boolean;
   hasWebhookSecret: boolean;
+  /** All three WhatsApp secrets present (verify + app + phone). */
+  hasWhatsapp: boolean;
 }
 
 const nonEmptySecret = (v: unknown): boolean => typeof v === 'string' && v.trim().length > 0;
@@ -492,7 +506,11 @@ export function redactConfigForRenderer(c: HarnessConfig): RedactedHarnessConfig
     hasSlackSigningSecret: has('slackSigningSecret', c.slackSigningSecret),
     hasSlackBotToken: has('slackBotToken', c.slackBotToken),
     hasGroqApiKey: has('groqApiKey', c.groqApiKey),
-    hasWebhookSecret: has('webhookSecret', c.webhookSecret)
+    hasWebhookSecret: has('webhookSecret', c.webhookSecret),
+    hasWhatsapp:
+      has('whatsappVerifyToken', undefined) &&
+      has('whatsappAppSecret', undefined) &&
+      has('whatsappPhoneToken', undefined)
   };
 }
 

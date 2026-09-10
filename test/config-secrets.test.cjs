@@ -61,6 +61,14 @@ test('redaction reports absence honestly (empty/whitespace/missing)', () => {
   assert.equal(empty.hasWebhookSecret, false);
 });
 
+test('whatsapp routing config passes through, secrets never do', () => {
+  const r = redactConfigForRenderer({
+    whatsapp: { enabled: true, phoneNumberId: '123', allowlist: ['9199'], port: 3851 }
+  });
+  assert.equal(r.hasWhatsapp, false, 'no vault primed here — absent');
+  assert.deepEqual(r.whatsapp, { enabled: true, phoneNumberId: '123', allowlist: ['9199'], port: 3851 });
+});
+
 test('config:get serves redacted, org/webhook reads strip values', () => {
   const index = readSrc('src/main/index.ts');
   assert.match(index, /ipcMain\.handle\('config:get', \(\) => redactConfigForRenderer\(readConfig\(\)\)\)/);
