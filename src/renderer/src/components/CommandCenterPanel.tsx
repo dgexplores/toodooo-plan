@@ -17,6 +17,7 @@ import { terminalInstanceKey } from './terminalRecovery';
 import { Icon } from './Icon';
 import { MemoryGraphPanel } from './MemoryGraphPanel';
 import { useFleetTelemetry } from '@/hooks/useTelemetry';
+import { useRestoreTeam } from '@/hooks/useRestoreTeam';
 import { COMMAND_GROUPS } from '@shared/claudeCommands';
 import { roleForHiveSpawn } from '@shared/agentRole';
 import { useStore, triggerHistoryVisible, type Agent } from '@/store/store';
@@ -1025,6 +1026,8 @@ function ArchivedSection() {
   const { t } = useTranslation();
   const archivedAgents = useStore((s) => s.archivedAgents);
   const removeArchivedAgent = useStore((s) => s.removeArchivedAgent);
+  const addRestorableAgent = useStore((s) => s.addRestorableAgent);
+  const { restoreTeam } = useRestoreTeam();
   const [open, setOpen] = useState(false);
   if (archivedAgents.length === 0) return null;
   return (
@@ -1056,6 +1059,11 @@ function ArchivedSection() {
             <div style={{ fontFamily: 'var(--cth-font-ui)', fontSize: 12, color: 'var(--cth-ink-700)' }}>{a.name}</div>
             <div style={{ fontSize: 11, color: 'var(--cth-ink-500)', wordBreak: 'break-all' }}>{a.cwd}</div>
           </div>
+          <button
+            onClick={() => { addRestorableAgent(a); void restoreTeam(); }}
+            title={t('commandCenter.restoreOne')}
+            style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--cth-ink-700)', fontSize: 12, flexShrink: 0 }}
+          >{t('commandCenter.restoreOne')}</button>
           <button
             onClick={() => removeArchivedAgent(a.id)}
             style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--cth-ink-500)', flexShrink: 0 }}

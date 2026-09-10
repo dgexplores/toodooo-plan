@@ -239,6 +239,9 @@ interface State {
   removeArchivedAgent: (id: string) => void;
   /** Drop one agent from the restorable list (it was respawned or dismissed). */
   removeRestorableAgent: (id: string) => void;
+  /** Queue one agent for restore (archived → restorable; the restore-team
+   *  flow respawns it with the boot-restore recipe). */
+  addRestorableAgent: (agent: Agent) => void;
   reorderAgents: (fromId: string, toId: string) => void; // move agent fromId into toId's slot (AgentStrip drag-reorder) and persist the new order
   /** One-shot request to open a Command-Center tab (e.g. clicking the office
    *  task board → 'tasks'). `seq` makes repeated identical requests distinct. */
@@ -878,6 +881,17 @@ export const useStore = create<State>((set, get) => ({
     set((s) => {
       if (!s.restorableAgents.some((a) => a.id === id)) return s;
       const restorableAgents = s.restorableAgents.filter((a) => a.id !== id);
+      persistRestorable(restorableAgents);
+      return { restorableAgents };
+    }),
+  /** Queue one agent for restore (e.g. an archived agent the human brings
+   *  back). Idempotent by id; the restore-team flow picks it up with the same
+   *  recipe, worktree fallback and result tally as a boot restore. */
+  addRestorableAgent: (agent) =>
+    set((s) => {
+      if (s.agents.some((a) => a.id === agent.id)) return s;
+      if (s.restorableAgents.some((a) => a.id === agent.id)) return s;
+      const restorableAgents = [...s.restorableAgents, agent];
       persistRestorable(restorableAgents);
       return { restorableAgents };
     }),

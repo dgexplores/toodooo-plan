@@ -1057,6 +1057,52 @@ export class HiveManager {
     } catch { /* best-effort — never crash a lifecycle handler */ }
   }
 
+  /** Rebind an agent to a new project folder (e.g. the folder was renamed on
+   *  disk, permanently breaking the agent with no in-app fix — issue #445).
+   *  Validates before writing: absolute path, existing directory. Patches the
+   *  registry + fleet display name path the same way renameAgent does, logs,
+   *  and recomputes cwdValid so the roster tells the truth immediately.
+   *  Never throws — returns a reason the UI can show. */
+  repairCwd(id: string, newCwd: string): { ok: boolean; cwd?: string; error?: string } {
+    const root = this.root();
+    if (!root) return { ok: false, error: 'hive disabled' };
+    const next = (newCwd ?? '').trim();
+    if (!next) return { ok: false, error: 'folder is required' };
+    if (!isAbsolute(next)) return { ok: false, error: 'folder must be an absolute path' };
+    try {
+      if (!statSync(next).isDirectory()) return { ok: false, error: 'not a directory' };
+    } catch {
+      return { ok: false, error: 'folder does not exist' };
+    }
+    try {
+      const reg = this.registry();
+      const agent = reg.agents[id];
+      if (!agent) return { ok: false, error: 'unknown agent' };
+      agent.cwd = next;
+      agent.cwdValid = true;
+      agent.lastSeen = Date.now();
+      this.atomicWriteJson(join(root, 'registry.json'), reg);
+      const fleetPath = join(root, 'fleet.json');
+      if (existsSync(fleetPath)) {
+        try {
+          const fleet = this.readJson<{ agents?: Array<{ id?: string; cwd?: string }> }>(fleetPath, {});
+          if (Array.isArray(fleet.agents)) {
+            const row = fleet.agents.find((candidate) => candidate.id === id);
+            if (row) {
+              row.cwd = next;
+              this.writeJson(fleetPath, fleet);
+            }
+          }
+        } catch { /* periodic snapshot repairs a malformed/stale fleet file */ }
+      }
+      this.appendLog({ kind: 'repair-cwd', agentId: id, cwd: next });
+      this.commit(`hive: repair cwd ${id}`);
+      return { ok: true, cwd: next };
+    } catch {
+      return { ok: false, error: 'could not rebind folder' };
+    }
+  }
+
   /**
    * Change an agent's display name without changing its durable identity.
    * The registry key, agent directory, session id, and every mailbox path remain

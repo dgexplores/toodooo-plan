@@ -3468,6 +3468,12 @@ ipcMain.handle('hive:renameAgent', (_evt, id: unknown, name: unknown) => {
   }
   return hive.renameAgent(id, name);
 });
+ipcMain.handle('hive:repairCwd', (_evt, id: unknown, cwd: unknown) => {
+  if (typeof id !== 'string' || typeof cwd !== 'string') {
+    return { ok: false, error: 'Invalid repair request' };
+  }
+  return hive.repairCwd(id, cwd);
+});
 ipcMain.handle('hive:setAgentHold', (_evt, id: unknown, hold: unknown) => {
   if (typeof id !== 'string' || typeof hold !== 'boolean') {
     return { ok: false, error: 'Invalid hold request' };

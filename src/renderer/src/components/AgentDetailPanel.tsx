@@ -29,6 +29,9 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
   const [openTerminalState, setOpenTerminalState] = useState<'idle' | 'opening' | 'ok' | 'error'>('idle');
   const [openTerminalError, setOpenTerminalError] = useState<string | undefined>();
   const [editOpen, setEditOpen] = useState(false);
+  const [repairOpen, setRepairOpen] = useState(false);
+  const [repairPath, setRepairPath] = useState('');
+  const [repairMsg, setRepairMsg] = useState<string | undefined>();
 
   /**
    * THE HEADER STRIP HAS TO GIVE SOMETHING UP WHEN THE SIDEBAR IS DRAGGED IN.
@@ -229,6 +232,42 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
         }}>{openTerminalError}</div>
       )}
+
+      {/* Folder repair: renaming the project on disk orphans the agent with no
+          in-app fix (issue #445). Rebinds registry + fleet to a validated dir. */}
+      <div style={{ padding: '2px 8px', fontSize: 11, color: 'var(--cth-ink-500)' }}>
+        <button
+          onClick={() => { setRepairOpen((v) => !v); setRepairPath(agent.cwd); setRepairMsg(undefined); }}
+          style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'inherit', fontSize: 11, padding: 0 }}
+        >{t('agentDetail.repairFolder')}</button>
+        {repairOpen && (
+          <span>
+            {' '}
+            <input
+              value={repairPath}
+              onChange={(e) => setRepairPath(e.target.value)}
+              placeholder={agent.cwd}
+              style={{ width: '60%', fontSize: 11, fontFamily: 'monospace' }}
+            />
+            <button
+              onClick={() => {
+                void window.cth.hiveRepairCwd(agent.id, repairPath).then((r) => {
+                  if (r.ok && r.cwd) {
+                    updateAgent(agent.id, { cwd: r.cwd });
+                    setRepairMsg(t('agentDetail.repaired'));
+                    setRepairOpen(false);
+                  } else {
+                    setRepairMsg(r.error ?? t('agentDetail.repairFailed'));
+                  }
+                });
+              }}
+              style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--cth-ink-700)', fontSize: 11 }}
+            >{t('agentDetail.repairBtn')}</button>
+          </span>
+        )}
+        {repairMsg && <div>{repairMsg}</div>}
+        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{agent.cwd}</div>
+      </div>
 
       {/* #7C — operator control (pause / halt / steer) for live agents */}
       {isReal && <AgentControlStrip agentId={agent.id} />}

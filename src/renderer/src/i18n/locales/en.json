@@ -152,6 +152,10 @@
     "killConfirm": "Close {{name}}? The PTY process will terminate and the agent is archived (kept in history, off the floor).",
     "ideTip": "Open the IDE: browse and edit files in {{project}}, and see uncommitted changes as a diff.",
     "terminalTip": "Open your system terminal app in {{cwd}} — a normal shell in this agent's folder, separate from the agent's own terminal.",
+    "repairFolder": "Repair folder",
+    "repairBtn": "Repair",
+    "repaired": "Folder updated.",
+    "repairFailed": "Repair failed.",
     "openIde": "Open the IDE",
     "ide": "IDE",
     "openTerminalAria": "Open a system terminal in this agent's folder"
@@ -432,6 +436,7 @@
     "archived": "ARCHIVED ({{count}})",
     "showClosed": "show closed agents",
     "hideClosed": "hide closed agents",
+    "restoreOne": "Restore",
     "directories": "DIRECTORIES",
     "noRepos": "No registered repos.",
     "openInTerminal": "Open in Terminal.app",
