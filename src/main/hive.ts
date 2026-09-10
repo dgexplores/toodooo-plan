@@ -1591,10 +1591,13 @@ export class HiveManager {
 
   /** Escalate a message to god; when god itself is absent the message is
    *  preserved in dead-letter/ instead of vanishing with only a drop log.
-   *  Returns true when god took delivery. */
+   *  The escalation is a NEW message (fresh id, in_reply_to the original):
+   *  reusing the id collapsed original and copy in id-based dedup and cursor
+   *  bookkeeping, hiding one of the two. Returns true when god took delivery. */
   private escalateToGod(msg: HiveMessage, subject: string): boolean {
     const godId = this.registry().godId ?? 'god';
-    if (this.deliver({ ...msg, to: godId, subject }, godId)) return true;
+    const fwdId = `${stamp()}-${shortRand()}`;
+    if (this.deliver({ ...msg, id: fwdId, in_reply_to: msg.id, to: godId, subject }, godId)) return true;
     const root = this.root();
     if (root) {
       try {
