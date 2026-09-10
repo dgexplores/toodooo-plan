@@ -1399,7 +1399,8 @@ export function OfficeFloor() {
           seatTile,
           seatDirection: facingForSeat(seatTile),
           spawnTile: entrance, // walk in from the office door
-          glowColor: hexNum(colors.accent[agent.accent]) ?? hexToNumber(member.shirt),
+          // The boss glows brand gold; everyone else glows their accent (or shirt).
+          glowColor: agent.isGod ? colors.brand.gold : (hexNum(colors.accent[agent.accent]) ?? hexToNumber(member.shirt)),
           onClick: (id) => useStore.getState().select(id),
         });
         character.show(charLayer);

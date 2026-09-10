@@ -34,6 +34,11 @@ export const colors = {
     peach: 0xd99168,
     peachLight: 0xf3daca
   },
+  // Brand gold — mirrors tokens.css --cth-brand. Used sparingly: boss accents.
+  brand: {
+    gold: 0xf4d35e,
+    goldLight: 0xfbedbe
+  },
   status: {
     idle: 0xa199ab,
     thinking: 0x4f9faf,
