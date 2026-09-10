@@ -114,3 +114,28 @@ test('something actually calls setGodName, or the wiring is dead', () => {
   assert.match(hook, /isGod/);
   assert.match(read('src/renderer/src/App.tsx'), /useGodNameSync\(\)/);
 });
+
+test('no hardcoded orchestrator name in rendered JSX (literals bypass i18n)', () => {
+  // The locale test above cannot see text baked straight into components, so
+  // the onboarding wizard shipped a literal "(Michael)" the suite stayed green
+  // for. Comments (//, /* */, and JSX {/* */}) and identifiers are fine;
+  // rendered text is not.
+  const bad = [];
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) { walk(p); continue; }
+      if (!/\.(tsx|jsx)$/.test(e.name)) continue;
+      const src = fs.readFileSync(p, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/(^|\s)\/\/.*$/gm, '$1');
+      src.split('\n').forEach((line, i) => {
+        if (/\(Michael\)|>Michael<|Michael (first|starts|is|can|never)/.test(line)) {
+          bad.push(`${path.relative(root, p)}:${i + 1}`);
+        }
+      });
+    }
+  };
+  walk(path.join(root, 'src', 'renderer', 'src'));
+  assert.deepEqual(bad, [], `rendered Michael literals (use godName):\n${bad.join('\n')}`);
+});
