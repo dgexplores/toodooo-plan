@@ -1,0 +1,93 @@
+{
+  "common": {
+    "on": "चालू",
+    "off": "बंद",
+    "cancel": "रद्द करें",
+    "save": "सहेजें",
+    "close": "बंद करें",
+    "back": "पीछे",
+    "next": "आगे",
+    "finish": "समाप्त",
+    "saving": "सहेजा जा रहा...",
+    "copy": "कॉपी करें",
+    "delete": "हटाएं",
+    "hide": "छिपाएं",
+    "show": "दिखाएं",
+    "search": "खोजें",
+    "tokens": "टोकन",
+    "restarting": "पुनः प्रारंभ हो रहा…",
+    "add": "जोड़ें"
+  },
+  "commandBar": {
+    "free": "उपलब्ध",
+    "skill": "/skill",
+    "quick": "त्वरित",
+    "placeholder": "कमांड लिखें",
+    "placeholderBusy": "Ada काम कर रहा है...",
+    "placeholderBlocked": "Ada को आपकी ज़रूरत है...",
+    "send": "भेजें",
+    "busyNote": "Ada अभी टूल चला रहा है। कतार में लगाएं या रोकें।",
+    "blockedNote": "अनुमति आवश्यक है।"
+  },
+  "agentCard": {
+    "boss": "बॉस",
+    "contextTitle": "संदर्भ: {{used}} / {{limit}} टोकन ({{pct}}%)",
+    "contextGaugeTitle": "संदर्भ गेज — एजेंट के सक्रिय होते ही भरता है",
+    "doingTasks": "सक्रिय रूप से {{count}} कार्य कर रहा — खोलने के लिए क्लिक करें",
+    "doingTasksPlural": "सक्रिय रूप से {{count}} कार्य कर रहा — खोलने के लिए क्लिक करें",
+    "editNote": "निजी नोट संपादित करें",
+    "addNote": "निजी नोट जोड़ें",
+    "editNoteAria": "{{name}} के लिए नोट संपादित करें",
+    "noteAria": "{{name}} के लिए नोट"
+  },
+  "agentStrip": {
+    "privateNote": "निजी नोट · {{name}}",
+    "done": "हो गया",
+    "closeNoteEditor": "नोट संपादक बंद करें",
+    "notePlaceholder": "हर बुलेट एक पंक्ति में…",
+    "oneLineOneBullet": "एक पंक्ति = एक बुलेट · बंद करने के लिए esc",
+    "addAgent": "एजेंट जोड़ें",
+    "restoringTitle": "आपके पिछले सत्र के एजेंट उन्हीं id के साथ फिर शुरू हो रहे हैं, ताकि मेमोरी और इनबॉक्स जुड़ जाएं।",
+    "restoreTitle": "पिछला सत्र: {{names}}",
+    "restoringTeam": "आपकी टीम बहाल हो रही है…",
+    "restoreTeam": "टीम बहाल करें ({{count}}) ▴",
+    "previousSession": "पिछला सत्र",
+    "restorable": "{{name}} — पिछले सत्र से बहाल किया जा सकता है",
+    "dismiss": "{{name}} खारिज करें — बहाली सूची से स्थायी रूप से हटाएं",
+    "dismissAria": "{{name}} खारिज करें",
+    "restoreAll": "सभी बहाल करें ({{count}})"
+  },
+  "sidebar": {
+    "terminal": "टर्मिनल",
+    "git": "गिट",
+    "messages": "संदेश",
+    "traces": "ट्रेस"
+  },
+  "badge": {
+    "idle": "निष्क्रिय",
+    "thinking": "कार्यरत",
+    "working": "कार्यरत",
+    "waiting": "प्रतीक्षा",
+    "blocked": "आपको चाहिए",
+    "success": "हो गया",
+    "ghost": "गया",
+    "compacting": "संघनन",
+    "looping": "चक्र में",
+    "typing": "आपका मसौदा"
+  },
+  "costHud": {
+    "spendCap": "खर्च सीमा",
+    "none": "कोई नहीं",
+    "usd": "USD",
+    "off": "(बंद)",
+    "thisSession": "{{usd}} इस सत्र में",
+    "thisSessionWithCap": "{{usd}} इस सत्र में / {{cap}}",
+    "audioTokens": "{{input}} इन · {{output}} आउट ऑडियो टोकन",
+    "overCap": "खर्च सीमा पार — समेटने का समय।",
+    "nearCap": "खर्च सीमा के करीब।",
+    "lastSession": "पिछला सत्र: {{usd}}",
+    "noSession": "कोई सक्रिय वॉइस सत्र नहीं।",
+    "compactTitle": "इस सत्र में {{count}} वॉइस ऑडियो टोकन",
+    "tok": "टोक"
+  }
+}
