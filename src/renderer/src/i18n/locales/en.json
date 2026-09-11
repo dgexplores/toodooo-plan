@@ -1449,5 +1449,13 @@
     "viewSource": "view source",
     "loading": "loading image…",
     "decodeFailed": "could not decode this image — the file may be corrupt or misnamed"
+  },
+  "agentPc": {
+    "list": "On the list",
+    "allClear": "Nothing assigned — all clear.",
+    "done": "Done",
+    "nothingDone": "Nothing finished yet.",
+    "recent": "Recent work",
+    "quiet": "Quiet so far."
   }
 }

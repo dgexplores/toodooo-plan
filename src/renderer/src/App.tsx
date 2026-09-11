@@ -29,6 +29,7 @@ import { SidebarSplitter } from '@/components/SidebarSplitter';
 import { acquireTerminal, notifyThemeChangeAll } from '@/components/terminalPool';
 import { FullscreenTerminal } from '@/components/FullscreenTerminal';
 import { TaskDetailOverlay } from '@/components/TaskDetailOverlay';
+import { AgentPcOverlay } from '@/components/AgentPcOverlay';
 import { IdePanel } from '@/ide/IdePanel';
 import { useHoldOptionToTalk } from '@/freeflow/holdOption';
 import brandLogo from '@brand/logo-toodooo.svg?url';
@@ -520,6 +521,7 @@ export function App() {
       {fullscreenAgentId && <FullscreenTerminal config={config} />}
       {ideOpen && <IdePanel />}
       <TaskDetailOverlay />
+      <AgentPcOverlay />
     </div>
   );
 }

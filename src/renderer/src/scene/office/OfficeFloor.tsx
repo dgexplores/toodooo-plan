@@ -1431,15 +1431,15 @@ export function OfficeFloor() {
           if (seatIndex != null) seatClaims.delete(seatIndex);
           return;
         }
-        // Clicking an agent — avatar or desk PC — opens its live terminal
-        // fullscreen (Esc to come back), same as the roster's open-terminal
-        // row. One shared handler: the seated avatar overlaps its monitor and
-        // swallows the tap first (stopPropagation), so both paths must agree
-        // or the monitor tap silently dies and the click "does nothing".
-        const openAgentTerminal = (id: string) => {
+        // Clicking an agent — avatar or desk PC — opens their desk-PC
+        // overview (status screen, never the terminal). One shared handler:
+        // the seated avatar overlaps its monitor and swallows the tap first
+        // (stopPropagation), so both paths must agree or the monitor tap
+        // silently dies and the click "does nothing".
+        const openAgentPc = (id: string) => {
           const st = useStore.getState();
           st.select(id);
-          if (st.agents.some((a) => a.id === id && a.ptyId)) st.setFullscreen(id);
+          st.openPc(id);
         };
         const character = new Character({
           agentId: agent.id,
@@ -1450,7 +1450,7 @@ export function OfficeFloor() {
           spawnTile: entrance, // walk in from the office door
           // The boss glows brand gold; everyone else glows their accent (or shirt).
           glowColor: agent.isGod ? colors.brand.gold : (hexNum(colors.accent[agent.accent]) ?? hexToNumber(member.shirt)),
-          onClick: openAgentTerminal,
+          onClick: openAgentPc,
         });
         character.show(charLayer);
         const rt: Runtime = { character, seatIndex, waitTile, charName };
@@ -1463,8 +1463,8 @@ export function OfficeFloor() {
           const top = { x: seatTile.x, y: seatTile.y - 2 };
           rt.screen = new DeskScreen(mapRenderer, top, theme.monitor, {
             // Shared with the avatar tap (see above): whichever fires, the
-            // terminal opens — no dead clicks.
-            onTap: () => openAgentTerminal(agent.id),
+            // PC overview opens — no dead clicks.
+            onTap: () => openAgentPc(agent.id),
           });
           charLayer.addChild(rt.screen.container);
           const ts2 = mapRenderer.tileSize;

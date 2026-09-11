@@ -35,17 +35,19 @@ test('floor maps hands to typing vs reading', () => {
     'working branch does not pass the texture');
 });
 
-test('desk monitor opens its owner terminal on tap', () => {
+test('desk taps open the PC overview, never the terminal', () => {
   const desk = read('src/renderer/src/scene/office/DeskScreen.ts');
   assert.match(desk, /opts\?: \{ onTap\?: \(\) => void \}/, 'DeskScreen takes no tap handler');
   assert.match(desk, /this\.container\.on\('pointertap', opts\.onTap\)/, 'tap never fires');
   const floor = read('src/renderer/src/scene/office/OfficeFloor.tsx');
   // The seated avatar overlaps its monitor and swallows the tap first, so the
-  // avatar path must open the terminal too — otherwise the click dies there.
-  assert.match(floor, /onClick: openAgentTerminal/, 'avatar tap still only selects');
-  assert.match(floor, /onTap: \(\) => openAgentTerminal\(agent\.id\)/, 'monitor tap bypasses the shared handler');
-  assert.match(floor, /if \(st\.agents\.some\(\(a\) => a\.id === id && a\.ptyId\)\) st\.setFullscreen\(id\)/,
-    'terminal opens without a live-pty guard');
+  // avatar path must open the same overview — otherwise the click dies there.
+  assert.match(floor, /onClick: openAgentPc/, 'avatar tap bypasses the PC overview');
+  assert.match(floor, /onTap: \(\) => openAgentPc\(agent\.id\)/, 'monitor tap bypasses the PC overview');
+  assert.match(floor, /st\.openPc\(id\)/, 'taps do not open the PC overview');
+  assert.doesNotMatch(floor, /openAgentPc[\s\S]{0,200}setFullscreen/,
+    'PC overview path leaks into fullscreen terminal');
+  assert.match(read('src/renderer/src/App.tsx'), /<AgentPcOverlay \/>/, 'overlay not mounted');
 });
 
 test('desk monitor mirrors owner state', () => {

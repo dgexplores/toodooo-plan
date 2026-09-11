@@ -1449,5 +1449,13 @@
     "viewSource": "查看源码",
     "loading": "正在加载图片…",
     "decodeFailed": "无法解码此图片——文件可能已损坏或扩展名有误"
+  },
+  "agentPc": {
+    "list": "在列表中",
+    "allClear": "未分配——一切清楚。",
+    "done": "已完成",
+    "nothingDone": "尚未完成。",
+    "recent": "最近的工作",
+    "quiet": "目前安静。"
   }
 }

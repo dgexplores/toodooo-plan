@@ -259,6 +259,11 @@ interface State {
   taskDetailId: string | null;
   openTaskDetail: (id: string) => void;
   closeTaskDetail: () => void;
+  /** The agent whose desk-PC overview is open (boss-style status screen over
+   *  the floor: now / on-the-list / done / recent — never the terminal). */
+  pcAgentId: string | null;
+  openPc: (id: string) => void;
+  closePc: () => void;
   /** One-shot prefill for the Command Center's dispatch box (a task detail's
    *  "assign" from anywhere in the app). seq-keyed like ccTabRequest. */
   dispatchSeedRequest: { text: string; seq: number } | null;
@@ -919,6 +924,9 @@ export const useStore = create<State>((set, get) => ({
   taskDetailId: null,
   openTaskDetail: (id) => set({ taskDetailId: id }),
   closeTaskDetail: () => set({ taskDetailId: null }),
+  pcAgentId: null,
+  openPc: (id) => set({ pcAgentId: id }),
+  closePc: () => set({ pcAgentId: null }),
   dispatchSeedRequest: null,
   requestDispatchSeed: (text) =>
     set((s) => ({ dispatchSeedRequest: { text, seq: (s.dispatchSeedRequest?.seq ?? 0) + 1 } })),
