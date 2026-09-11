@@ -1456,6 +1456,9 @@
     "done": "Done",
     "nothingDone": "Nothing finished yet.",
     "recent": "Recent work",
-    "quiet": "Quiet so far."
+    "quiet": "Quiet so far.",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "earlier": "Earlier"
   }
 }

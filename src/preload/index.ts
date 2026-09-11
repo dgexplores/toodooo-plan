@@ -165,6 +165,8 @@ export interface HiveTask {
   humanQA?: HumanQA[];
   /** Outcome summary used for the Slack done-notification. */
   result?: string;
+  /** ISO finish stamp, owned by main patchTask (set on done, cleared off it). */
+  completedAt?: string | null;
   /** Origin thread for a Slack-sourced task (drives the done-summary reply). */
   slack?: { channel: string; thread_ts: string };
   /** SHA-256 of the capability token for a generic-webhook-sourced task (drives

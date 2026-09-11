@@ -121,6 +121,10 @@ export interface HiveTask {
   /** Outcome summary, surfaced by the Slack done-notifier when this card reaches
    *  'done'. Optional; the notifier falls back to description/title. */
   result?: string;
+  /** ISO finish stamp, owned by patchTask: set on entering done (once),
+   *  cleared on leaving, explicit patch value wins. Drives the boss-PC
+   *  today/yesterday split. Absent on old cards — they group as earlier. */
+  completedAt?: string | null;
   /** Set when this task originated from a Slack message — the thread the
    *  done-summary reply is posted back into. Consumed OUTBOUND only; populating
    *  it is the inbound/kanban side's job and does not affect routing. */
@@ -2065,14 +2069,31 @@ export class HiveManager {
   }
 
   /** Patch one card against the latest on-disk ledger, preserving unrelated
-   *  cards and fields (notably webhook.tokenHash and Slack thread metadata). */
+   *  cards and fields (notably webhook.tokenHash and Slack thread metadata).
+   *  Owns the `completedAt` stamp: entering done stamps it (once — a re-done
+   *  keeps the first finish), leaving done clears it, an explicit value in
+   *  the patch wins. The single choke point, so kanban moves, voice updates
+   *  and assign writes all date their finishes the same way. */
   patchTask(id: string, patch: Partial<Omit<HiveTask, 'id'>>): boolean {
     const ledger = this.tasks() as { tasks?: HiveTask[] };
     const tasks = Array.isArray(ledger?.tasks) ? ledger.tasks : [];
     const index = tasks.findIndex((task) => task?.id === id);
     if (index < 0) return false;
+    const prior = tasks[index] as HiveTask & { completedAt?: string };
+    const nextStatus = (patch as { status?: unknown }).status;
+    const stamp: { completedAt?: string | null } = {};
+    if (nextStatus === 'done' && !(patch as { completedAt?: unknown }).completedAt && !prior.completedAt) {
+      stamp.completedAt = new Date().toISOString();
+    } else if (nextStatus !== undefined && nextStatus !== 'done' && (prior.completedAt || (patch as { completedAt?: unknown }).completedAt)) {
+      stamp.completedAt = null;
+    }
     const next = tasks.slice();
-    next[index] = { ...tasks[index], ...patch, id };
+    // Spread order matters: an explicit completedAt in the patch beats the
+    // stamp, and a clearing null beats the disk value — mergeTaskLedger
+    // resurrects a merely-deleted key from the prior card, so clearing rides
+    // as an explicit null (its documented clear signal); readers treat null
+    // as absent and the next finish re-stamps fresh.
+    next[index] = { ...tasks[index], ...stamp, ...patch, id };
     this.writeTasks(next);
     return true;
   }

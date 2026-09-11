@@ -17,6 +17,19 @@ import { parseTasks, type HiveTask } from './TasksKanban';
 const POLL_MS = 5000;
 const stripAnsi = (s: string): string => s.replace(/\[[0-9;]*m/g, '');
 
+/** Which day bucket a finish stamp falls in, in local time. Missing or
+ *  unparseable stamps group as earlier — old cards predate the stamp. */
+function dayBucket(iso: string | null | undefined, now = new Date()): 'today' | 'yesterday' | 'earlier' {
+  if (!iso) return 'earlier';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return 'earlier';
+  const day = (x: Date): string => `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}`;
+  if (day(d) === day(now)) return 'today';
+  const y = new Date(now);
+  y.setDate(y.getDate() - 1);
+  return day(d) === day(y) ? 'yesterday' : 'earlier';
+}
+
 export function AgentPcOverlay() {
   const { t } = useTranslation();
   const pcAgentId = useStore((s) => s.pcAgentId);
@@ -48,7 +61,9 @@ export function AgentPcOverlay() {
 
   const mine = tasks.filter((x) => x.assignee === agent.id);
   const open = mine.filter((x) => x.status !== 'done');
-  const done = mine.filter((x) => x.status === 'done');
+  const doneToday = mine.filter((x) => x.status === 'done' && dayBucket(x.completedAt) === 'today');
+  const doneYesterday = mine.filter((x) => x.status === 'done' && dayBucket(x.completedAt) === 'yesterday');
+  const doneEarlier = mine.filter((x) => x.status === 'done' && dayBucket(x.completedAt) === 'earlier');
   const recent = feed.map(stripAnsi).filter((x) => x.trim()).slice(-8).reverse();
   const now = (agent.action || '').trim() || (agent.lastPrompt || '').trim().split(/\s+/).slice(0, 6).join(' ') || t('office.activity.idle');
 
@@ -77,10 +92,10 @@ export function AgentPcOverlay() {
               ))}
             </PcSection>
 
-            <PcSection title={t('agentPc.done')} empty={done.length === 0 ? t('agentPc.nothingDone') : null}>
-              {done.map((x) => (
-                <PcTaskRow key={x.id} title={x.title} status={x.status} onOpen={() => openTask(x.id)} />
-              ))}
+            <PcSection title={t('agentPc.done')} empty={mine.every((x) => x.status !== 'done') ? t('agentPc.nothingDone') : null}>
+              <DoneDay title={t('agentPc.today')} items={doneToday} onOpen={openTask} />
+              <DoneDay title={t('agentPc.yesterday')} items={doneYesterday} onOpen={openTask} />
+              <DoneDay title={t('agentPc.earlier')} items={doneEarlier} onOpen={openTask} />
             </PcSection>
 
             <PcSection title={t('agentPc.recent')} empty={recent.length === 0 ? t('agentPc.quiet') : null}>
@@ -117,6 +132,18 @@ function PcSection({ title, empty, children }: { title: string; empty: string | 
       {empty
         ? <span style={{ fontSize: 12, color: 'var(--cth-ink-300)' }}>{empty}</span>
         : <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>{children}</div>}
+    </div>
+  );
+}
+
+function DoneDay({ title, items, onOpen }: { title: string; items: HiveTask[]; onOpen: (id: string) => void }) {
+  if (items.length === 0) return null;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ fontFamily: 'var(--cth-font-ui)', fontSize: 11, color: 'var(--cth-ink-500)' }}>{title}</div>
+      {items.map((x) => (
+        <PcTaskRow key={x.id} title={x.title} status={x.status} onOpen={() => onOpen(x.id)} />
+      ))}
     </div>
   );
 }

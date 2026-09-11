@@ -1456,6 +1456,9 @@
     "done": "已完成",
     "nothingDone": "尚未完成。",
     "recent": "最近的工作",
-    "quiet": "目前安静。"
+    "quiet": "目前安静。",
+    "today": "今天",
+    "yesterday": "昨天",
+    "earlier": "更早"
   }
 }

@@ -35,6 +35,13 @@ test('floor maps hands to typing vs reading', () => {
     'working branch does not pass the texture');
 });
 
+test('PC done splits by finish day', () => {
+  const src = read('src/renderer/src/components/AgentPcOverlay.tsx');
+  assert.match(src, /dayBucket\(x\.completedAt\) === 'today'/, 'no today split');
+  assert.match(src, /dayBucket\(x\.completedAt\) === 'yesterday'/, 'no yesterday split');
+  assert.match(src, /if \(!iso\) return 'earlier';/, 'missing stamps must group as earlier');
+});
+
 test('desk taps open the PC overview, never the terminal', () => {
   const desk = read('src/renderer/src/scene/office/DeskScreen.ts');
   assert.match(desk, /opts\?: \{ onTap\?: \(\) => void \}/, 'DeskScreen takes no tap handler');
