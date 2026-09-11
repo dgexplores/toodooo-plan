@@ -42,6 +42,18 @@ test('PC done splits by finish day', () => {
   assert.match(src, /if \(!iso\) return 'earlier';/, 'missing stamps must group as earlier');
 });
 
+test('avatar and monitor taps use explicit hit geometry', () => {
+  // Tap-dead-room incident: texture-backed hit-testing silently dropped taps
+  // on avatars/monitors, so clicks visibly on an agent did nothing. Both
+  // targets now carry an explicit hitArea; this guards the geometry.
+  const sprite = read('src/renderer/src/scene/office/CharacterSprite.ts');
+  assert.match(sprite, /enableTap\(onTap: \(\) => void\)/, 'sprite tap helper gone');
+  assert.match(sprite, /new Rectangle\(\s*-this\.frameW \/ 2, -this\.frameH, this\.frameW, this\.frameH\)/,
+    'avatar hitArea gone');
+  const desk = read('src/renderer/src/scene/office/DeskScreen.ts');
+  assert.match(desk, /new Rectangle\(0, 0, ts \* 2, ts \* 2\)/, 'monitor hitArea gone');
+});
+
 test('desk taps open the PC overview, never the terminal', () => {
   const desk = read('src/renderer/src/scene/office/DeskScreen.ts');
   assert.match(desk, /opts\?: \{ onTap\?: \(\) => void \}/, 'DeskScreen takes no tap handler');

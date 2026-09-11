@@ -1,4 +1,4 @@
-import { Container, Graphics, Sprite } from 'pixi.js';
+import { Container, Graphics, Rectangle, Sprite } from 'pixi.js';
 import type { TiledMapRenderer } from './TiledMapRenderer';
 import type { MonitorConfig } from './themeRegistry';
 
@@ -58,6 +58,9 @@ export class DeskScreen {
     if (opts?.onTap) {
       this.container.eventMode = 'static';
       this.container.cursor = 'pointer';
+      // Explicit 2×2-tile hit box (same reason as the avatar hitArea:
+      // tile-texture hit-testing proved flaky, taps died silently).
+      this.container.hitArea = new Rectangle(0, 0, ts * 2, ts * 2);
       this.container.on('pointertap', opts.onTap);
     } else {
       this.container.eventMode = 'none';

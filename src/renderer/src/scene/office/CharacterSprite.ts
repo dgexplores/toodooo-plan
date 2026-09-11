@@ -1,4 +1,4 @@
-import { AnimatedSprite, Container, Graphics, Texture } from 'pixi.js';
+import { AnimatedSprite, Container, Graphics, Rectangle, Texture } from 'pixi.js';
 
 export type Direction = 'down' | 'up' | 'right' | 'left';
 export type AnimState = 'walk' | 'type' | 'read' | 'idle';
@@ -103,6 +103,21 @@ export class CharacterSprite {
   setPosition(x: number, y: number): void {
     this.container.x = x;
     this.container.y = y;
+  }
+
+  /** Make the avatar tappable with deterministic geometry. An explicit hitArea
+   *  (feet-anchored body box, unscaled frame dims — the container scale maps
+   *  it) instead of relying on per-frame texture hit-testing, which proved
+   *  flaky for canvas-composited frames: taps visibly on the avatar died. */
+  enableTap(onTap: () => void): void {
+    this.container.eventMode = 'static';
+    this.container.cursor = 'pointer';
+    this.container.hitArea = new Rectangle(
+      -this.frameW / 2, -this.frameH, this.frameW, this.frameH);
+    this.container.on('pointertap', (e) => {
+      e.stopPropagation();
+      onTap();
+    });
   }
 
   setAlpha(alpha: number): void {

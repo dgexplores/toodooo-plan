@@ -497,12 +497,7 @@ export class Character {
   private targetAlpha = 1;
 
   private enableClick(): void {
-    this.sprite.container.eventMode = 'static';
-    this.sprite.container.cursor = 'pointer';
-    this.sprite.container.on('pointertap', (e) => {
-      e.stopPropagation();
-      this.onClick?.(this.agentId);
-    });
+    this.sprite.enableTap(() => this.onClick?.(this.agentId));
   }
 
   show(parent: Container): void {
