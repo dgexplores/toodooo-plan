@@ -35,6 +35,14 @@ test('floor maps hands to typing vs reading', () => {
     'working branch does not pass the texture');
 });
 
+test('agent header has a working PC button (DOM path)', () => {
+  // Floor taps proved flaky under probe; the detail header button is the
+  // guaranteed opener — same openPc call, trusted DOM event path.
+  const src = read('src/renderer/src/components/AgentDetailPanel.tsx');
+  assert.match(src, /const openPc = useStore\(s => s\.openPc\);/, 'openPc not subscribed');
+  assert.match(src, /onClick=\{\(\) => openPc\(agent\.id\)\}/, 'PC button does not call openPc');
+});
+
 test('PC done splits by finish day', () => {
   const src = read('src/renderer/src/components/AgentPcOverlay.tsx');
   assert.match(src, /dayBucket\(x\.completedAt\) === 'today'/, 'no today split');

@@ -158,7 +158,9 @@
     "repairFolder": "Repair folder",
     "repairBtn": "Repair",
     "repaired": "Folder updated.",
-    "repairFailed": "Repair failed."
+    "repairFailed": "Repair failed.",
+    "openPc": "电脑",
+    "pcTip": "打开状态屏：当前、已分配、已完成、最近"
   },
   "settingsHero": {
     "sponsoredBy": "赞助方",

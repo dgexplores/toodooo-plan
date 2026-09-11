@@ -82,6 +82,7 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
   const updateAgent = useStore(s => s.updateAgent);
   const renameAgent = useStore(s => s.renameAgent);
   const setFullscreen = useStore(s => s.setFullscreen);
+  const openPc = useStore(s => s.openPc);
   const fullscreenAgentId = useStore(s => s.fullscreenAgentId);
   const sidebarTab = useStore(s => s.sidebarTab);
   const setSidebarTab = useStore(s => s.setSidebarTab);
@@ -175,6 +176,19 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
             }}>{agent.project}</span>
           </div>
         </div>
+        {/* Desk-PC overview: the boss-style status screen for this agent
+            (now / assigned / done / recent) — a DOM button that always works,
+            next to the floor-tap path. */}
+        <PixelButton variant="secondary" size="sm" onClick={() => openPc(agent.id)}>
+          <span
+            className="cth-tip cth-tip-wrap"
+            data-tip={t('agentDetail.pcTip', { name: agent.name })}
+            aria-label={t('agentDetail.openPc')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+          >
+            <Icon name="sidebar" />{!compactHeader && t('agentDetail.openPc')}
+          </span>
+        </PixelButton>
         <PixelButton variant="secondary" size="sm" onClick={() => setEditOpen(true)}>
           <span
             className="cth-tip cth-tip-wrap"

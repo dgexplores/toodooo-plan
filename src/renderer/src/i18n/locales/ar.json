@@ -158,7 +158,9 @@
     "repairFolder": "إصلاح المجلد",
     "repairBtn": "إصلاح",
     "repaired": "تم تحديث المجلد.",
-    "repairFailed": "فشل الإصلاح."
+    "repairFailed": "فشل الإصلاح.",
+    "openPc": "الحاسوب",
+    "pcTip": "افتح شاشة الحالة: الآن، المسند، المنجز، الأخير"
   },
   "settingsHero": {
     "sponsoredBy": "برعاية",

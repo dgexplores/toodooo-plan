@@ -158,7 +158,9 @@
     "repairFailed": "Repair failed.",
     "openIde": "Open the IDE",
     "ide": "IDE",
-    "openTerminalAria": "Open a system terminal in this agent's folder"
+    "openTerminalAria": "Open a system terminal in this agent's folder",
+    "openPc": "PC",
+    "pcTip": "Open the status screen: now, assigned, done, recent"
   },
   "settingsHero": {
     "sponsoredBy": "Sponsored by",
