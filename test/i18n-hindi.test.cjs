@@ -16,7 +16,7 @@ const en = JSON.parse(fs.readFileSync(path.join(LOCALES, 'en.json'), 'utf8'));
 const hi = JSON.parse(fs.readFileSync(path.join(LOCALES, 'hi.json'), 'utf8'));
 
 // Coverage floor: today's translated count. Bump when adding sections — never lower.
-const COVERAGE_FLOOR = 70;
+const COVERAGE_FLOOR = 130;
 
 function leaves(obj, prefix = []) {
   const out = [];

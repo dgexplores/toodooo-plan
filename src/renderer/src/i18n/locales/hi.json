@@ -89,5 +89,79 @@
     "noSession": "कोई सक्रिय वॉइस सत्र नहीं।",
     "compactTitle": "इस सत्र में {{count}} वॉइस ऑडियो टोकन",
     "tok": "टोक"
+  },
+  "kanban": {
+    "count": "{{count}} कार्य",
+    "newWorkHint": "नया काम? {{godName}} को भेजें (मॉनिटर टैब)",
+    "colTodo": "बाकी",
+    "colDoing": "जारी",
+    "colBlocked": "अटका हुआ",
+    "colDone": "पूरा",
+    "openTaskDetails": "कार्य विवरण खोलें",
+    "needsYouTitle": "आपके उत्तर की प्रतीक्षा — ASK ME टैब देखें",
+    "dismissTitle": "यह कार्य हटाएं (बोर्ड से हटेगा)",
+    "dismissAria": "कार्य हटाएं",
+    "taskTitle": "कार्य",
+    "unassigned": "असाइन नहीं",
+    "noDescription": "(इस कार्ड पर कोई विवरण नहीं)",
+    "humanQA": "मानव प्रश्नोत्तर",
+    "awaitingAnswer": "आपके उत्तर की प्रतीक्षा — ASK ME टैब",
+    "dependsOn": "निर्भर करता है",
+    "assign": "सौंपें",
+    "priority": "प्राथमिकता {{level}}/5"
+  },
+  "office": {
+    "activity": {
+      "waiting": "प्रतीक्षा",
+      "needsYou": "आपको चाहिए",
+      "compacting": "संदर्भ समेट रहा",
+      "looping": "चक्र में — ब्रेकर सक्रिय",
+      "runningFloor": "फ्लोर चला रहा",
+      "idle": "निष्क्रिय"
+    },
+    "mugs": {
+      "empty": "कोई साफ मग नहीं…",
+      "brewing": "ताज़ा चाय बन रही ☕",
+      "washing": "मग धो रहा"
+    }
+  },
+  "askMe": {
+    "emptyTitle": "अभी आपको कुछ नहीं चाहिए। 🌿",
+    "emptySub": "जब टीम किसी कार्य पर आपके इनपुट पर अटकेगी — जवाब देने वाला सवाल या सिर्फ आप ही कर सकें ऐसा काम — तो वह यहां (और फ्लोर पर ASK ME बोर्ड पर) दिखेगा।",
+    "openDetail": "पूरा कार्य विवरण खोलें",
+    "dismissTitle": "हटाएं — बिना जवाब दिए ASK ME बोर्ड से साफ करें (इतिहास रहेगा)",
+    "dismissAria": "यह पूछ हटाएं",
+    "answerPlaceholder": "आपका उत्तर — या done, परिणाम सहित… (भेजने के लिए Ctrl+Enter)",
+    "sending": "भेजा जा रहा…",
+    "respond": "जवाब दें और अनब्लॉक करें",
+    "viewAnswers": "पहले के {{count}} उत्तर देखें",
+    "viewAnswersPlural": "पहले के {{count}} उत्तर देखें",
+    "viewAnswersHistory": "पूरा प्रश्नोत्तर इतिहास के साथ कार्य विवरण खोलें",
+    "blockingDownstream": "{{count}} आगे का कार्य रोक रहा",
+    "blockingDownstreamPlural": "{{count}} आगे के कार्य रोक रहा",
+    "more": "… +{{count}} और"
+  },
+  "blockedBanner": {
+    "needsYou": "आपको चाहिए"
+  },
+  "officeTheme": {
+    "title": "ऑफिस थीम",
+    "tvShow": "टीवी-शो ऑफिस थीम",
+    "experimental": "प्रायोगिक",
+    "desc": "पिक्सेल ऑफिस को टीवी शो जैसा बनाएं। बदलने पर नई कास्ट शुरू होती है।",
+    "current": "वर्तमान",
+    "soon": "जल्द",
+    "notBuiltYet": "{{label}} अभी बना नहीं — फिलहाल ऑफिस दिख रहा है।",
+    "switchAborted": "बदलाव रद्द — एक टर्मिनल बंद नहीं हुआ: {{error}}",
+    "confirmTitle": "ऑफिस बदलकर \"{{label}}\" करें?",
+    "startsFreshCast": "नई कास्ट शुरू होगी",
+    "deleteCount": "आपका {{count}} मौजूदा एजेंट हट जाएगा — टर्मिनल बंद होंगे और चलता काम रुकेगा।",
+    "deleteCountPlural": "आपके {{count}} मौजूदा एजेंट हट जाएंगे — टर्मिनल बंद होंगे और चलता काम रुकेगा।",
+    "onlyCarries": "सिर्फ {{god}} साथ रहेगा।",
+    "stillWorking": "⚠ {{count}} एजेंट अभी काम कर रहा है।",
+    "stillWorkingPlural": "⚠ {{count}} एजेंट अभी काम कर रहे हैं।",
+    "cantUndo": "यह वापस नहीं होगा।",
+    "switching": "बदला जा रहा…",
+    "deleteSwitch": "{{count}} हटाएं और बदलें"
   }
 }
