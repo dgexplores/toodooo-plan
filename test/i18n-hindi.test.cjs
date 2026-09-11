@@ -15,8 +15,8 @@ const LOCALES = path.join(__dirname, '..', 'src', 'renderer', 'src', 'i18n', 'lo
 const en = JSON.parse(fs.readFileSync(path.join(LOCALES, 'en.json'), 'utf8'));
 const hi = JSON.parse(fs.readFileSync(path.join(LOCALES, 'hi.json'), 'utf8'));
 
-// Coverage floor: today's translated count. Bump when adding sections — never lower.
-const COVERAGE_FLOOR = 130;
+// Coverage floor: full parity (1210). The ratchet now guards regressions only.
+const COVERAGE_FLOOR = 1210;
 
 function leaves(obj, prefix = []) {
   const out = [];
