@@ -59,6 +59,11 @@ export function usePtyParser(agentId: string) {
       window.clearTimeout(idleTimerRef.current);
     }
     idleTimerRef.current = window.setTimeout(() => {
+      // Hooks own the state while they flow: re-check at FIRE time (a hook may
+      // have landed after this timer was scheduled). Hookless providers never
+      // stamp, so their timer path is unchanged.
+      const a = useStore.getState().agents.find((x) => x.id === agentId);
+      if (a && Date.now() - (a.lastHookAt ?? 0) < 6000) return;
       // No new tool calls for ~4 s → assume the model went idle
       updateAgent(agentId, {
         status: 'idle',

@@ -481,6 +481,10 @@ export function useHive(config: HarnessConfig | null): void {
       const { updateAgent, agents } = useStore.getState();
       const self = agents.find((a) => a.id === e.agentId);
       if (!self) return;
+      // Coherence stamp: the pty parser's idle timer yields while hooks are
+      // flowing, so a quiet 4s gap mid-turn can't yank a busy avatar idle.
+      // Volatile field: no persist, no avatar retrigger (applyState ignores it).
+      updateAgent(e.agentId, { lastHookAt: Date.now() });
       // Breaker precedence (#5C): a constrained/stopped agent stays 'looping'
       // regardless of in-flight tool/prompt/compact events.
       const blevel = breakerLevel.current[e.agentId];

@@ -111,6 +111,11 @@ export interface Agent {
    *  positional seed. useHive types it once after boot-grace then clears it.
    *  Ephemeral spawn state — not persisted. (ondev-b) */
   seedPrompt?: string;
+  /** Ephemeral: epoch ms of the last hook event for this agent. Lets the pty
+   *  parser yield to hook-driven state (Stop-drain reads as working, etc.)
+   *  instead of timer-yanking a busy avatar idle mid-turn. Volatile: never
+   *  persisted, stale across reload is harmless (only a 6s window reads it). */
+  lastHookAt?: number;
 }
 
 export interface FeedEntry {
@@ -449,8 +454,8 @@ try {
 } catch { /* not a browser context (unit tests) */ }
 
 function slimAgents(agents: Agent[]): PersistedAgent[] {
-  return agents.map(({ recentAssistantText, recentTextTs, blockReason, contextTokens, contextLimit, seedPrompt, ...rest }) => {
-    void recentAssistantText; void recentTextTs; void blockReason; void contextTokens; void contextLimit; void seedPrompt;
+  return agents.map(({ recentAssistantText, recentTextTs, blockReason, contextTokens, contextLimit, seedPrompt, lastHookAt, ...rest }) => {
+    void recentAssistantText; void recentTextTs; void blockReason; void contextTokens; void contextLimit; void seedPrompt; void lastHookAt;
     return rest;
   });
 }
@@ -473,7 +478,7 @@ function persistAgents(agents: Agent[], selectedId: string | null): void {
 const VOLATILE_AGENT_FIELDS = new Set<keyof Agent>([
   'status', 'action', 'progress', 'currentStation', 'carrying',
   'recentAssistantText', 'recentTextTs', 'blockReason',
-  'contextTokens', 'contextLimit', 'lastPrompt'
+  'contextTokens', 'contextLimit', 'lastPrompt', 'lastHookAt'
 ]);
 
 function touchesDurableAgentField(patch: Partial<Agent>): boolean {

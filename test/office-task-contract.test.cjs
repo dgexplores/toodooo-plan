@@ -35,6 +35,19 @@ test('floor maps hands to typing vs reading', () => {
     'working branch does not pass the texture');
 });
 
+test('parser idle timer yields to flowing hooks', () => {
+  const store = read('src/renderer/src/store/store.ts');
+  assert.match(store, /lastHookAt\?: number;/, 'lastHookAt field gone');
+  assert.match(store, /'contextTokens', 'contextLimit', 'lastPrompt', 'lastHookAt'/,
+    'lastHookAt persists per hook event (must stay volatile)');
+  const hive = read('src/renderer/src/hooks/useHive.ts');
+  assert.match(hive, /updateAgent\(e\.agentId, \{ lastHookAt: Date\.now\(\) \}\)/,
+    'hook handler stopped stamping');
+  const parser = read('src/renderer/src/hooks/usePtyParser.ts');
+  assert.match(parser, /Date\.now\(\) - \(a\.lastHookAt \?\? 0\) < 6000/,
+    'idle drift no longer checks hook freshness');
+});
+
 test('assign writes the assignee to a live worker, never an installer', () => {
   const src = read('src/renderer/src/components/TaskDetailOverlay.tsx');
   assert.match(src, /hivePatchTask\(task\.id, \{ assignee: target\.id \}\)/,
