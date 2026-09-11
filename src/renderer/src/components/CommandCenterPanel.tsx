@@ -387,6 +387,7 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
   const agents = useStore((s) => s.agents);
   const godName = agents.find((a) => a.isGod)?.name ?? 'the orchestrator';
   const select = useStore((s) => s.select);
+  const openPc = useStore((s) => s.openPc);
   const updateAgent = useStore((s) => s.updateAgent);
   const toolCounts = useStore((s) => s.toolCounts);
   // Live OpenTelemetry per agent — merged into each agent card below (the old
@@ -754,6 +755,20 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
                   fontFamily: 'var(--cth-font-ui)', fontSize: 12, color: 'var(--cth-ink-900)'
                 }}
               >{a.name}{a.isGod ? t('commandCenter.godTag') : ''}</button>
+              {/* Desk-PC overview for this agent (now / assigned / done /
+                  recent) — the DOM opener that always works, next to the
+                  floor-tap path. */}
+              <button
+                onClick={() => openPc(a.id)}
+                title={t('agentDetail.pcTip', { name: a.name })}
+                aria-label={t('agentDetail.openPc')}
+                style={{
+                  border: 'none', background: 'var(--cth-cream-200)', cursor: 'pointer',
+                  padding: '1px 7px', fontFamily: 'var(--cth-font-ui)', fontSize: 11,
+                  color: 'var(--cth-ink-900)',
+                  boxShadow: 'inset 0 0 0 1px var(--cth-ink-100)'
+                }}
+              >{t('agentDetail.openPc')}</button>
               <PixelBadge status={armed ? 'looping' : a.status} />
               {armed && <span title={breaker?.reason} style={{ color: 'var(--cth-coral)', fontSize: 12 }}>⚠</span>}
               <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--cth-ink-500)' }}>

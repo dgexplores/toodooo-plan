@@ -35,6 +35,12 @@ test('floor maps hands to typing vs reading', () => {
     'working branch does not pass the texture');
 });
 
+test('monitor roster rows carry a PC opener (god included)', () => {
+  const src = read('src/renderer/src/components/CommandCenterPanel.tsx');
+  assert.match(src, /const openPc = useStore\(\(s\) => s\.openPc\);/, 'FloorTab missing openPc');
+  assert.match(src, /onClick=\{\(\) => openPc\(a\.id\)\}/, 'row PC button missing');
+});
+
 test('agent header has a working PC button (DOM path)', () => {
   // Floor taps proved flaky under probe; the detail header button is the
   // guaranteed opener — same openPc call, trusted DOM event path.
