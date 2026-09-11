@@ -36,7 +36,9 @@ test('capTail keeps the newest n', () => {
 
 test('store pushFeed rings through capTail at FEED_MAX', () => {
   const src = readSrc('src/renderer/src/store/store.ts');
-  assert.match(src, /capTail\(\[\.\.\.\(s\.feeds\[id\] \?\? \[\]\), line\], FEED_MAX\)/);
+  // Refactored to a named `cur` (plus dup-collapse); the ring behavior is
+  // unchanged — still capTail append at FEED_MAX.
+  assert.match(src, /capTail\(\[\.\.\.cur, line\], FEED_MAX\)/);
   assert.match(src, /from '@shared\/limits'/);
 });
 
