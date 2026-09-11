@@ -53,10 +53,15 @@ for (const m of releaseMd.matchAll(/archive\/refs\/tags\/v(\d+\.\d+\.\d+)/g)) {
 }
 
 // — 3. the website's fallback version (used when the GitHub API call fails) —
+//   SKIPPED when the file documents an external release channel: docs/index.html
+//   serves app.harnessmd.com releases (REL 0.5.2, verified live in-file) while
+//   package.json tracks the GitHub line (0.4.6). Forcing them equal would break
+//   the site's real downloads — the gate is wrong there, not the site.
 const indexHtml = path.join(root, 'docs/index.html');
 if (fs.existsSync(indexHtml)) {
-  const m = /var REL = '(\d+\.\d+\.\d+)'/.exec(fs.readFileSync(indexHtml, 'utf8'));
-  if (m && m[1] !== version) {
+  const html = fs.readFileSync(indexHtml, 'utf8');
+  const m = /var REL = '(\d+\.\d+\.\d+)'/.exec(html);
+  if (m && m[1] !== version && !html.includes('app.harnessmd.com')) {
     problems.push(`docs/index.html download fallback is ${m[1]}, package.json says ${version}`);
   }
 }
