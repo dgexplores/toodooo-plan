@@ -88,7 +88,10 @@ test('agent_spawn_attempted fires once per attempt, gated against the install re
 
 test('the real spawn reports both success and failure', () => {
   assert.match(main, /if \(res\.ok\) analytics\.track\('agent_spawned', \{ provider \}\);/);
-  assert.match(main, /else analytics\.track\('agent_spawn_failed', \{ provider, reason: spawnFailReason\(res\.error\) \}\);/);
+  // Since the spawn-sync slice the failure branch also drops the staged
+  // ptyToAgent/watchdog entries, so it is a block now — the funnel itself
+  // (both events fire with the same payloads) is unchanged.
+  assert.match(main, /analytics\.track\('agent_spawn_failed', \{ provider, reason: spawnFailReason\(res\.error\) \}\);/);
 });
 
 test('the missing-CLI branch distinguishes installer-running, Mode 2, and spawn error', () => {
