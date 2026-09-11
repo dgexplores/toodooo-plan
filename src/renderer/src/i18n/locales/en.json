@@ -614,7 +614,9 @@
     "errFolder": "Pick a folder first",
     "errCommand": "Command is required",
     "hireProgress": "hire {{current}} of {{total}}",
-    "skipHire": "skip hire"
+    "skipHire": "skip hire",
+    "simple": "Simple",
+    "advanced": "Advanced"
   },
   "onboarding": {
     "titles": {

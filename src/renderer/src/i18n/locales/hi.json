@@ -857,7 +857,9 @@
     "errFolder": "पहले फोल्डर चुनें",
     "errCommand": "कमांड ज़रूरी है",
     "hireProgress": "{{current}} / {{total}} हायर",
-    "skipHire": "हायर छोड़ें"
+    "skipHire": "हायर छोड़ें",
+    "simple": "आसान",
+    "advanced": "एडवांस्ड"
   },
   "setupPanel": {
     "title": "पूर्वापेक्षाएं",

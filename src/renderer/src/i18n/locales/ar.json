@@ -614,7 +614,9 @@
     "errFolder": "اختر مجلدًا أولًا",
     "errCommand": "الأمر مطلوب",
     "hireProgress": "التعيين {{current}} من {{total}}",
-    "skipHire": "تخطَّ التعيين"
+    "skipHire": "تخطَّ التعيين",
+    "simple": "بسيط",
+    "advanced": "متقدم"
   },
   "onboarding": {
     "titles": {

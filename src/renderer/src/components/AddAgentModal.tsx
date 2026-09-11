@@ -246,6 +246,10 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
   const [busy, setBusy] = useState(false);
   // Which config section the left sidebar index is showing.
   const [section, setSection] = useState<SectionKey>('identity');
+  // Quick hire: non-technical audience gets name + project + goal only.
+  // Power controls (command text, OSS picks, resume id, AI/import footer)
+  // hide behind Advanced; submit path and defaults are identical either way.
+  const [simple, setSimple] = useState(config.audience === 'non-technical');
   // "Generate a hire with AI" helper — reveals a copy-paste prompt (item 7).
   const [showHirePrompt, setShowHirePrompt] = useState(false);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
@@ -535,6 +539,22 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
               around the section pane. maxHeight keeps the dialog within the
               viewport (title bar stays pinned). */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16, maxHeight: '86vh', overflowY: 'auto' }}>
+            {/* Simple/Advanced switch. Simple is the default for a
+                non-technical audience (set at onboarding); it hides the
+                power controls below but changes no defaults or submit path. */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setSimple((v) => !v)}
+                style={{
+                  padding: '2px 8px 1px', border: 'none', cursor: 'pointer',
+                  background: 'var(--cth-cream-200)',
+                  boxShadow: 'inset 0 0 0 1px var(--cth-ink-100)',
+                  fontFamily: 'var(--cth-font-ui)', fontSize: 12, color: 'var(--cth-ink-900)'
+                }}
+              >
+                {simple ? tr('addAgent.advanced') : tr('addAgent.simple')}
+              </button>
+            </div>
             {hireMeta && (
               <div style={{
                 padding: '6px 10px',
@@ -854,6 +874,9 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                       </span>
                     </label>
 
+                    {/* Resume is a power control: hidden in quick hire (no
+                        resume id typed means a fresh session — the default). */}
+                    {!simple && (
                     <Row label={tr('addAgent.resumeSession')}>
                       <input
                         value={resumeSessionId}
@@ -873,6 +896,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                         </span>
                       )}
                     </Row>
+                    )}
                   </>
                 )}
 
@@ -954,7 +978,9 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                         engine-correct slug (OpenCode `local/<tag>`, Crush/pi
                         `ollama/<tag>`; provider slugs are identical across engines)
                         and rebuilds the command. */}
-                    {hasOssQuickPicks(provider) && (
+                    {/* OSS-model quick-picks are a power control: provider and
+                        model chips above already cover quick hire. */}
+                    {!simple && hasOssQuickPicks(provider) && (
                       <Row label={tr('addAgent.ossModels')}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           <div>
@@ -1016,6 +1042,9 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                       </div>
                     )}
 
+                    {/* Raw command text is a power control: chips above rebuild
+                        it automatically, so quick hire never shows it. */}
+                    {!simple && (
                     <Row label={config.autoMode && preset.autoFlag ? tr('addAgent.commandAuto') : tr('addAgent.command')}>
                       <input
                         value={command}
@@ -1032,6 +1061,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                         style={{ ...inputStyle, fontFamily: 'var(--cth-font-mono)' }}
                       />
                     </Row>
+                    )}
                   </>
                 )}
 
@@ -1094,7 +1124,9 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
               </div>
             )}
 
-            {/* Import-hire explainer + AI prompt generator (item 7) */}
+            {/* Import-hire explainer + AI prompt generator (item 7).
+                Power controls: hidden in quick hire. */}
+            {!simple && (
             <div style={{
               padding: '8px 10px',
               background: 'var(--cth-cream-100)',
@@ -1143,6 +1175,7 @@ export function AddAgentModal({ onClose, config, onConfigChange }: AddAgentModal
                 </div>
               )}
             </div>
+            )}
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
               <PixelButton
