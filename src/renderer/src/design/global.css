@@ -369,3 +369,21 @@ canvas, img, svg { image-rendering: pixelated; image-rendering: crisp-edges; }
 .cth-md-card hr { margin: 0.8em 0; }
 .cth-md-card table { margin: 0.5em 0; }
 .cth-md-card th, .cth-md-card td { padding: 3px 7px; font-size: 0.9em; }
+
+/* Raw chip/tab/nav buttons — the app builds these as plain <button> with
+   inline styles (no shared component), so they shipped with zero hover or
+   pressed feedback while PixelButton (which manages its own states) felt
+   alive next to them. One global rule covers every chip: provider/model
+   pickers, tab strips, cast buttons, section nav. PixelButton keeps its own
+   fill-swap (this brightness shift layers subtly on top); its inline
+   pressed transform wins over the rule below by specificity. */
+button:not(:disabled) {
+  transition: filter 120ms ease-out, transform 80ms ease-out;
+}
+button:not(:disabled):hover { filter: brightness(0.94); }
+button:not(:disabled):active { transform: translateY(1px); }
+
+/* Tabular numerals app-wide — spend meters, token gauges, context titles
+   and counts stop jittering as digits change. Inter ships tnum; prose is
+   unaffected in practice. */
+body { font-variant-numeric: tabular-nums; }
