@@ -16,7 +16,7 @@ const en = JSON.parse(fs.readFileSync(path.join(LOCALES, 'en.json'), 'utf8'));
 const hi = JSON.parse(fs.readFileSync(path.join(LOCALES, 'hi.json'), 'utf8'));
 
 // Coverage floor: full parity (1210). The ratchet now guards regressions only.
-const COVERAGE_FLOOR = 1212;
+const COVERAGE_FLOOR = 1214;
 
 function leaves(obj, prefix = []) {
   const out = [];

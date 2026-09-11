@@ -512,7 +512,9 @@
     "openIdeAria": "Open the IDE",
     "spendTitle": "SPEND — TODAY (IST)",
     "spendToday": "today",
-    "spendUnattributed": "unattributed"
+    "spendUnattributed": "unattributed",
+    "showAllTabs": "More",
+    "showFewerTabs": "Fewer"
   },
   "addAgent": {
     "title": "ADD AGENT",

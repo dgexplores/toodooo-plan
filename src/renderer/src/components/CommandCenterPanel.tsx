@@ -81,6 +81,11 @@ const TABS: { key: CCTab; labelKey: string; icon: Parameters<typeof Icon>[0]['na
   { key: 'spend', labelKey: 'commandCenter.tabs.spend', icon: 'ledger' }
 ];
 
+/** Daily tabs for a non-technical audience. Power tabs (triggers, history,
+ *  memory, graph, activity, skills) hide behind More; nothing unmounts
+ *  permanently and external requests auto-expand. */
+const CORE_TABS: CCTab[] = ['terminal', 'floor', 'tasks', 'human', 'workers', 'spend'];
+
 /** @param fullscreen this instance IS the fullscreen overlay, so it owns the pty
  *  and renders the real terminal. The docked instance renders the "open in
  *  fullscreen" placeholder instead — two live xterms on one pty fight over its
@@ -95,11 +100,22 @@ export function CommandCenterPanel({ agent, fullscreen = false }: { agent: Agent
   // The rule itself lives in the store (`triggerHistoryVisible`) beside the two
   // mirrors it reads — a second copy here would drift from Settings.
   const showHistory = useStore(triggerHistoryVisible);
+  // Simple tab strip for a non-technical audience (set at onboarding): six
+  // daily tabs, power tabs behind More. Audience lives in main config — one
+  // IPC on mount, defaults to full strip on failure (never hide on error).
+  const [simpleTabs, setSimpleTabs] = useState(false);
+  const [showAllTabs, setShowAllTabs] = useState(false);
+  useEffect(() => {
+    window.cth.getConfig()
+      .then((c) => { if (c.audience === 'non-technical') setSimpleTabs(true); })
+      .catch(() => { /* keep the full strip */ });
+  }, []);
+  const visibleTabs = TABS.filter((t) => t.key !== 'trigger-history' || showHistory)
+    .filter((t) => !simpleTabs || showAllTabs || CORE_TABS.includes(t.key));
   // Never leave the panel parked on a tab that has just been hidden.
   useEffect(() => {
-    if (!showHistory && tab === 'trigger-history') setTab('terminal');
-  }, [showHistory, tab]);
-  const visibleTabs = TABS.filter((t) => t.key !== 'trigger-history' || showHistory);
+    if (!visibleTabs.some((t) => t.key === tab)) setTab('terminal');
+  });
 
   // External tab requests (the office task board → 'tasks', the boss-room
   // calendar → 'triggers'). seq-keyed so clicking again re-opens the tab even
@@ -112,6 +128,9 @@ export function CommandCenterPanel({ agent, fullscreen = false }: { agent: Agent
     // Read the gate live rather than depending on it — as a dependency it would
     // re-fire a stale request the moment the tab appeared.
     if (key === 'trigger-history' && !triggerHistoryVisible(useStore.getState())) return;
+    // An external request names a real destination: expand the simple strip
+    // so the tab it asked for is actually visible.
+    if (!CORE_TABS.includes(key)) setShowAllTabs(true);
     setTab(key);
   }, [ccTabRequest]);
   // A task-detail "assign" pre-fills the Floor dispatch box and jumps to it.
@@ -289,6 +308,22 @@ export function CommandCenterPanel({ agent, fullscreen = false }: { agent: Agent
             <Icon name={tabDef.icon} /> {t(tabDef.labelKey)}
           </button>
         ))}
+        {/* Simple strip overflow: power tabs live behind this toggle. */}
+        {simpleTabs && (
+          <button
+            onClick={() => setShowAllTabs((v) => !v)}
+            style={{
+              whiteSpace: 'nowrap', flex: '1 0 auto',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+              padding: '4px 8px 3px', border: 'none', cursor: 'pointer',
+              background: 'var(--cth-cream-200)',
+              boxShadow: 'inset 0 0 0 1px var(--cth-ink-100)',
+              fontFamily: 'var(--cth-font-ui)', fontSize: 13, color: 'var(--cth-ink-900)'
+            }}
+          >
+            {showAllTabs ? t('commandCenter.showFewerTabs') : t('commandCenter.showAllTabs')}
+          </button>
+        )}
       </div>
 
       {/* Body */}

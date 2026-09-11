@@ -512,7 +512,9 @@
     "restoreOne": "استعادة",
     "spendTitle": "الإنفاق — اليوم (IST)",
     "spendToday": "اليوم",
-    "spendUnattributed": "غير منسوب"
+    "spendUnattributed": "غير منسوب",
+    "showAllTabs": "المزيد",
+    "showFewerTabs": "أقل"
   },
   "addAgent": {
     "title": "إضافة وكيل",

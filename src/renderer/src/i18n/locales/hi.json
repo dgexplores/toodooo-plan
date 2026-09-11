@@ -562,7 +562,9 @@
     "openIdeAria": "IDE खोलें",
     "spendTitle": "खर्च — आज (IST)",
     "spendToday": "आज",
-    "spendUnattributed": "बिना हिसाब"
+    "spendUnattributed": "बिना हिसाब",
+    "showAllTabs": "और",
+    "showFewerTabs": "कम"
   },
   "queueComposer": {
     "recording": "● रिकॉर्डिंग — रोककर ट्रांसक्राइब करें",

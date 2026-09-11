@@ -512,7 +512,9 @@
     "restoreOne": "Restore",
     "spendTitle": "SPEND — TODAY (IST)",
     "spendToday": "today",
-    "spendUnattributed": "unattributed"
+    "spendUnattributed": "unattributed",
+    "showAllTabs": "更多",
+    "showFewerTabs": "收起"
   },
   "addAgent": {
     "title": "添加智能体",

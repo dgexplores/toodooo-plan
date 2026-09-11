@@ -37,3 +37,15 @@ test('submit path is shared between modes', () => {
   const submits = src.match(/window\.cth\.spawnPty\(/g) || [];
   assert.equal(submits.length, 1, `expected one spawn path, found ${submits.length}`);
 });
+
+test('simple tab strip shows six daily tabs behind More', () => {
+  const src = read('src/renderer/src/components/CommandCenterPanel.tsx');
+  assert.match(src, /const CORE_TABS: CCTab\[\] = \['terminal', 'floor', 'tasks', 'human', 'workers', 'spend'\]/,
+    'core tab set changed');
+  assert.match(src, /\.filter\(\(t\) => !simpleTabs \|\| showAllTabs \|\| CORE_TABS\.includes\(t\.key\)\)/,
+    'simple gate missing');
+  assert.match(src, /if \(!CORE_TABS\.includes\(key\)\) setShowAllTabs\(true\)/,
+    'external requests do not auto-expand');
+  assert.match(src, /if \(!visibleTabs\.some\(\(t\) => t\.key === tab\)\) setTab\('terminal'\)/,
+    'parked-tab guard does not cover the simple gate');
+});
