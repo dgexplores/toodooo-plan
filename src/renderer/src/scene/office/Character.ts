@@ -81,6 +81,10 @@ export class Character {
   private path: { x: number; y: number }[] = [];
   private pendingWork: CharacterAnimation | null = null;
   private pendingSit = false;
+  /** Desk work texture for the seated pose: typing (edits) or reading (research).
+   *  Set by sitAtDesk, consumed by applySitPose on arrival — previously the seat
+   *  always played 'idle', so working avatars never typed or read. */
+  private deskTexture: 'type' | 'read' | null = null;
   private sitting = false;
   private wandering = false;
   private idleTimer = 0;
@@ -201,16 +205,18 @@ export class Character {
 
   /** Sit at the assigned desk, facing the monitor. Walks there first if away.
    *  `working` toggles the pulsing focus halo. This is the default pose — agents
-   *  stay seated unless blocked. */
-  sitAtDesk(working: boolean): void {
+   *  stay seated unless blocked. `texture` plays the seated work animation
+   *  (typing vs reading) instead of plain idle. */
+  sitAtDesk(working: boolean, texture: 'type' | 'read' | null = null): void {
     this.idleLoop = false;     // an explicit desk command ends the idle loop
-    this.walkToDeskAndSit(working);
+    this.walkToDeskAndSit(working, texture);
   }
 
   /** Walk to the home desk (if away) and sit. `working` toggles the focus halo.
    *  Shared by sitAtDesk (real work/wait) and the idle-loop rest. */
-  private walkToDeskAndSit(working: boolean): void {
+  private walkToDeskAndSit(working: boolean, texture: 'type' | 'read' | null = null): void {
     this.glowOn = working;
+    this.deskTexture = texture;
     this.wandering = false;
     const t = this.getTilePosition();
     if (t.x === this.deskTile.x && t.y === this.deskTile.y) {
@@ -231,13 +237,14 @@ export class Character {
   /** Snap into a seated pose facing `dir` at the current tile. Shared by the
    *  home desk (applySit) and any café seat (sitInPlace). */
   private applySitPose(dir: Direction): void {
-    this.state = 'idle';
+    const anim = this.deskTexture ?? 'idle';
+    this.state = anim;
     this.pendingWork = null;
     this.pendingSit = false;
     this.path = [];
     this.sitting = true;
     this.direction = dir;
-    this.sprite.setAnimation('idle', dir);
+    this.sprite.setAnimation(anim, dir);
     // Slide toward the desk so the agent tucks in instead of floating in the
     // aisle, then crop the legs so they read as seated (no standing legs).
     let dx = 0, dy = 0;
@@ -259,6 +266,7 @@ export class Character {
     this.idleLoop = false;
     this.wandering = false;
     this.glowOn = false;
+    this.deskTexture = null; // breaks are idle, never typed work
     this.arrivalCallback = null;
     this.applySitPose(dir);
   }
@@ -280,6 +288,7 @@ export class Character {
   setIdle(): void {
     this.idleLoop = false;
     this.state = 'idle';
+    this.deskTexture = null;
     this.pendingWork = null;
     this.pendingSit = false;
     this.sitting = false;

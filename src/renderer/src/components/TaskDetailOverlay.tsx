@@ -56,12 +56,33 @@ export function TaskDetailOverlay() {
   };
 
   const assign = () => {
-    // Route through the Command Center's dispatch box (which mails the god —
-    // the human never writes into a worker's inbox directly).
+    // Assign to the currently selected live worker when there is one: write the
+    // assignee onto the card NOW (board + floor desk note update on next poll)
+    // and still route the work through god via the dispatch seed — the human
+    // never writes into a worker's inbox directly. Installing/god/assistant/dead
+    // selections fall through to the unassigned god-routed path below.
     const st = useStore.getState();
+    const target = st.agents.find((a) =>
+      a.id === st.selectedId && !a.isGod && !a.isAssistant && !!a.ptyId &&
+      !/^installing engine/i.test(a.action ?? ''));
+    const desc = task.description?.trim() ? task.description.trim() : '(no description)';
+    if (target) {
+      const next = tasks.map((t) => (t.id === task.id ? { ...t, assignee: target.id } : t));
+      setTasks(next); // optimistic
+      window.cth.hivePatchTask(task.id, { assignee: target.id })
+        .then((r) => { if (!r.ok) void refresh(); else void refresh(); })
+        .catch(() => { void refresh(); });
+      const god = st.agents.find((a) => a.isGod);
+      if (god) st.select(god.id);
+      st.requestDispatchSeed(`Task: ${task.title} (assigned to ${target.name})\nContext: ${desc}\n`);
+      st.requestCommandCenterTab('floor');
+      closeTaskDetail();
+      return;
+    }
+    // No live worker selected — route through the Command Center's dispatch box
+    // (which mails the god) and let god pick the assignee.
     const god = st.agents.find((a) => a.isGod);
     if (god) st.select(god.id);
-    const desc = task.description?.trim() ? task.description.trim() : '(no description)';
     st.requestDispatchSeed(`Task: ${task.title}\nContext: ${desc}\n`);
     st.requestCommandCenterTab('floor');
     closeTaskDetail();

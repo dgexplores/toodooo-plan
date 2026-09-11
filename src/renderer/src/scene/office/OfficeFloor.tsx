@@ -154,6 +154,27 @@ function liveActivity(agent: Agent, fallback = ''): string {
   return firstWords(agent.lastPrompt) || fallback;
 }
 
+/** Seated work animation for a busy agent, from what its hands hold: edits type,
+ *  research reads, shell/other keeps the plain seated pose. Drives the
+ *  type/read sprite frames that sat unused since the port. */
+function deskTextureFor(agent: Agent): 'type' | 'read' | null {
+  switch (agent.carrying) {
+    case 'Edit':
+    case 'Write':
+    case 'TodoWrite':
+      return 'type';
+    case 'Read':
+    case 'Grep':
+    case 'Glob':
+    case 'WebFetch':
+    case 'WebSearch':
+    case 'MCP':
+      return 'read';
+    default:
+      return null;
+  }
+}
+
 /** First few words of the last user prompt, for the desk card. */
 function firstWords(prompt: string | undefined, maxWords = 6, maxChars = 42): string {
   if (!prompt) return '';
@@ -1510,7 +1531,7 @@ export function OfficeFloor() {
           case 'working':
           case 'thinking':
             c.setStatusGlyph('none');
-            c.sitAtDesk(true);
+            c.sitAtDesk(true, deskTextureFor(agent));
             c.showThought(liveActivity(agent), agent.carrying);
             break;
           case 'waiting':
