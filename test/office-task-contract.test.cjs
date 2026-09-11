@@ -40,8 +40,12 @@ test('desk monitor opens its owner terminal on tap', () => {
   assert.match(desk, /opts\?: \{ onTap\?: \(\) => void \}/, 'DeskScreen takes no tap handler');
   assert.match(desk, /this\.container\.on\('pointertap', opts\.onTap\)/, 'tap never fires');
   const floor = read('src/renderer/src/scene/office/OfficeFloor.tsx');
-  assert.match(floor, /st\.select\(agent\.id\);\s*\n\s*st\.setFullscreen\(agent\.id\)/,
-    'monitor tap does not open the owner terminal');
+  // The seated avatar overlaps its monitor and swallows the tap first, so the
+  // avatar path must open the terminal too — otherwise the click dies there.
+  assert.match(floor, /onClick: openAgentTerminal/, 'avatar tap still only selects');
+  assert.match(floor, /onTap: \(\) => openAgentTerminal\(agent\.id\)/, 'monitor tap bypasses the shared handler');
+  assert.match(floor, /if \(st\.agents\.some\(\(a\) => a\.id === id && a\.ptyId\)\) st\.setFullscreen\(id\)/,
+    'terminal opens without a live-pty guard');
 });
 
 test('desk monitor mirrors owner state', () => {
