@@ -35,6 +35,17 @@ test('floor maps hands to typing vs reading', () => {
     'working branch does not pass the texture');
 });
 
+test('desk monitor mirrors owner state', () => {
+  const desk = read('src/renderer/src/scene/office/DeskScreen.ts');
+  assert.match(desk, /setMode\(mode: 'busy' \| 'alert' \| 'wait' \| 'idle'\)/,
+    'DeskScreen.setMode gone');
+  const floor = read('src/renderer/src/scene/office/OfficeFloor.tsx');
+  assert.match(floor, /rt\.screen\?\.setMode\(screenModeFor\(agent\.status\)\)/,
+    'applyState does not drive the monitor');
+  assert.match(floor, /case 'blocked':\s*\n\s*case 'looping':\s*\n\s*return 'alert';/,
+    'blocked/looping do not alert the monitor');
+});
+
 test('parser idle timer yields to flowing hooks', () => {
   const store = read('src/renderer/src/store/store.ts');
   assert.match(store, /lastHookAt\?: number;/, 'lastHookAt field gone');

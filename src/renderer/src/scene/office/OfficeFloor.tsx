@@ -175,6 +175,24 @@ function deskTextureFor(agent: Agent): 'type' | 'read' | null {
   }
 }
 
+/** Desk-monitor mood for an avatar state: the screen light mirrors what the
+ *  owner is doing so the whole floor reads at a glance. */
+function screenModeFor(status: Agent['status']): 'busy' | 'alert' | 'wait' | 'idle' {
+  switch (status) {
+    case 'working':
+    case 'thinking':
+    case 'compacting':
+      return 'busy';
+    case 'blocked':
+    case 'looping':
+      return 'alert';
+    case 'waiting':
+      return 'wait';
+    default:
+      return 'idle';
+  }
+}
+
 /** First few words of the last user prompt, for the desk card. */
 function firstWords(prompt: string | undefined, maxWords = 6, maxChars = 42): string {
   if (!prompt) return '';
@@ -1493,6 +1511,9 @@ export function OfficeFloor() {
 
         const c = rt.character;
         c.setBaseAlpha(agent.status === 'ghost' ? 0.5 : 1);
+        // The desk monitor mirrors the state even before/without the avatar
+        // pose: gold rush = working, red pulse = blocked/looping, dim = idle.
+        rt.screen?.setMode(screenModeFor(agent.status));
 
         // While an agent is on a coffee break the director owns its avatar — a
         // mere idle/success refresh must not yank it back to wandering. Any
