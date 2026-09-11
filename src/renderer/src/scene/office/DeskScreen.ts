@@ -33,7 +33,7 @@ export class DeskScreen {
    *  alert pulses red, wait drifts slow blue, idle sits dim and still. */
   private mode: 'busy' | 'alert' | 'wait' | 'idle' = 'idle';
 
-  constructor(mapRenderer: TiledMapRenderer, topLeft: { x: number; y: number }, monitor?: MonitorConfig) {
+  constructor(mapRenderer: TiledMapRenderer, topLeft: { x: number; y: number }, monitor?: MonitorConfig, opts?: { onTap?: () => void }) {
     const ts = mapRenderer.tileSize;
     const onGids = monitor?.onGids ?? DEFAULT_ON_GIDS;
     for (const [gid, dx, dy] of onGids) {
@@ -53,7 +53,15 @@ export class DeskScreen {
     // under it — same painter's order the map art implies.
     this.container.zIndex = (topLeft.y + 2) * ts - 1;
     this.container.visible = false;
-    this.container.eventMode = 'none';
+    // Clicking the monitor opens that agent's live terminal (same action as
+    // the roster's open-terminal row). No tap handler → fully inert.
+    if (opts?.onTap) {
+      this.container.eventMode = 'static';
+      this.container.cursor = 'pointer';
+      this.container.on('pointertap', opts.onTap);
+    } else {
+      this.container.eventMode = 'none';
+    }
   }
 
   /** Light the screen (agent sat down) or cut it (stood up / left). */

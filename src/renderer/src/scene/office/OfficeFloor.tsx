@@ -1451,7 +1451,15 @@ export function OfficeFloor() {
         // where an agent actually carried one).
         if (mapRenderer.gidAt('furniture-above', seatTile.x, seatTile.y - 2) === theme.monitor.offTopLeftGid) {
           const top = { x: seatTile.x, y: seatTile.y - 2 };
-          rt.screen = new DeskScreen(mapRenderer, top, theme.monitor);
+          rt.screen = new DeskScreen(mapRenderer, top, theme.monitor, {
+            // The desk PC opens its owner's live terminal fullscreen (Esc to
+            // come back) — same as the roster's open-terminal row.
+            onTap: () => {
+              const st = useStore.getState();
+              st.select(agent.id);
+              st.setFullscreen(agent.id);
+            },
+          });
           charLayer.addChild(rt.screen.container);
           const ts2 = mapRenderer.tileSize;
           character.setCupSpot({ x: top.x * ts2 + 18, y: top.y * ts2 + 23 });

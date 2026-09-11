@@ -35,6 +35,15 @@ test('floor maps hands to typing vs reading', () => {
     'working branch does not pass the texture');
 });
 
+test('desk monitor opens its owner terminal on tap', () => {
+  const desk = read('src/renderer/src/scene/office/DeskScreen.ts');
+  assert.match(desk, /opts\?: \{ onTap\?: \(\) => void \}/, 'DeskScreen takes no tap handler');
+  assert.match(desk, /this\.container\.on\('pointertap', opts\.onTap\)/, 'tap never fires');
+  const floor = read('src/renderer/src/scene/office/OfficeFloor.tsx');
+  assert.match(floor, /st\.select\(agent\.id\);\s*\n\s*st\.setFullscreen\(agent\.id\)/,
+    'monitor tap does not open the owner terminal');
+});
+
 test('desk monitor mirrors owner state', () => {
   const desk = read('src/renderer/src/scene/office/DeskScreen.ts');
   assert.match(desk, /setMode\(mode: 'busy' \| 'alert' \| 'wait' \| 'idle'\)/,
