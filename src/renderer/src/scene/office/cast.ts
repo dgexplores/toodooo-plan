@@ -1,10 +1,11 @@
-// The Office cast — roster metadata + sprite frames.
+// The toodooo floor team — roster metadata + sprite frames.
 //
 // Both the static portraits (cards / picker) and the in-scene walking sprites are
 // now fully custom-drawn from the same per-character recipes in portraitArt.ts:
 // the scene sprite reuses the portrait's exact head/face/clothing and adds legs,
-// so an agent on the office floor looks identical to its card. The LimeZu base
-// sheets are no longer used for the cast. See assets/ATTRIBUTION.md.
+// so an agent on the office floor looks identical to its card. `name` ids are
+// stable keys (persisted on agents, matched by voice-hire inference) — the
+// display names, blurbs and shirts below are toodooo's own team.
 
 import { Texture } from 'pixi.js';
 import { paintPortrait, sceneFrameBufs, SCENE_W, SCENE_H } from './portraitArt';
@@ -26,20 +27,20 @@ export interface CastMember {
 /** Selectable roster, in display order. */
 export const OFFICE_CAST: CastMember[] = [
   { name: 'michael',  displayName: 'Deepak',   shirt: '#5a6b8c', blurb: 'Runs the floor' },
-  { name: 'jim',      displayName: 'Jim',      shirt: '#6fa8dc', blurb: 'Salesman, prankster' },
-  { name: 'pam',      displayName: 'Pam',      shirt: '#9caf88', blurb: 'Receptionist, artist' },
-  { name: 'dwight',   displayName: 'Dwight',   shirt: '#b89b3e', blurb: 'Assistant (to the) RM' },
-  { name: 'kevin',    displayName: 'Kevin',    shirt: '#4a7ab5', blurb: 'Accounting' },
-  { name: 'angela',   displayName: 'Angela',   shirt: '#8a86a6', blurb: 'Head of accounting' },
-  { name: 'oscar',    displayName: 'Oscar',    shirt: '#7a4b6b', blurb: 'Accountant' },
-  { name: 'stanley',  displayName: 'Stanley',  shirt: '#8c5a4b', blurb: 'Sales, crossword' },
-  { name: 'phyllis',  displayName: 'Phyllis',  shirt: '#b08bbf', blurb: 'Sales' },
-  { name: 'andy',     displayName: 'Andy',     shirt: '#6fae6f', blurb: 'Cornell, a cappella' },
-  { name: 'kelly',    displayName: 'Kelly',    shirt: '#d16ba5', blurb: 'Customer service' },
-  { name: 'ryan',     displayName: 'Ryan',     shirt: '#3a3a44', blurb: 'The temp' },
-  { name: 'toby',     displayName: 'Toby',     shirt: '#9a8c5a', blurb: 'Human resources' },
-  { name: 'creed',    displayName: 'Creed',    shirt: '#6b7a4b', blurb: 'Quality assurance' },
-  { name: 'meredith', displayName: 'Meredith', shirt: '#b5544a', blurb: 'Supplier relations' },
+  { name: 'jim',      displayName: 'Arjun',    shirt: '#2e7d6e', blurb: 'Ships on Fridays' },
+  { name: 'pam',      displayName: 'Priya',    shirt: '#c65b8c', blurb: 'Draws the pixels' },
+  { name: 'dwight',   displayName: 'Vikram',   shirt: '#8a6d2f', blurb: 'Tests everything twice' },
+  { name: 'kevin',    displayName: 'Rohan',    shirt: '#3f6f9e', blurb: 'Keeps the books' },
+  { name: 'angela',   displayName: 'Kavya',    shirt: '#6e5f9e', blurb: 'Counts every token' },
+  { name: 'oscar',    displayName: 'Farhan',   shirt: '#8a3b52', blurb: 'Knows the ledger' },
+  { name: 'stanley',  displayName: 'Mohan',    shirt: '#96684a', blurb: 'Crosswords at lunch' },
+  { name: 'phyllis',  displayName: 'Lakshmi',  shirt: '#a86fa8', blurb: 'Sweetens the deals' },
+  { name: 'andy',     displayName: 'Aditya',   shirt: '#3f8f5f', blurb: 'Sings in standup' },
+  { name: 'kelly',    displayName: 'Neha',     shirt: '#c2487f', blurb: 'Runs the group chat' },
+  { name: 'ryan',     displayName: 'Karan',    shirt: '#4a4a58', blurb: 'The intern' },
+  { name: 'toby',     displayName: 'Suresh',   shirt: '#8a7f4e', blurb: 'Human resources' },
+  { name: 'creed',    displayName: 'Dev',      shirt: '#5f7040', blurb: 'Quality, allegedly' },
+  { name: 'meredith', displayName: 'Meera',    shirt: '#a34a3e', blurb: 'Vendor whisperer' },
 ];
 
 export const CAST_BY_NAME: Record<OfficeCharacterName, CastMember> =

@@ -21,7 +21,7 @@ const pick = <T,>(arr: readonly T[], seed: number): T =>
 const COFFEE: readonly string[] = [
   'is this… decaf?? who did this',
   "we're out of beans again",
-  'World’s Best Boss mug',
+  'the chipped gold mug',
   'first cup of the day. and the fifth.',
   'the coffee here is basically a hug',
   'who took my mug?',
@@ -60,21 +60,21 @@ const SPOT_POOL: Record<BreakSpot, readonly string[]> = {
 // ─── character flavour — overrides the generic pool when present ─────────────
 
 const BY_CHARACTER: Partial<Record<OfficeCharacterName, readonly string[]>> = {
-  michael:  ['I AM the deadline.', 'declared it: no meetings before coffee.', 'world’s okayest boss. allegedly.', 'my door is always open. it is also always blocking the hallway.'],
-  dwight:   ['FALSE. try again.', 'efficiency is a lifestyle', 'that mug is NOT regulation. I checked.', 'this fridge needs an inventory system'],
-  jim:      ['...anyway.', 'moved the mouse again. classic.', 'just here for the gossip', 'nobody saw anything.'],
-  pam:      ['toodooo, this is Pam', 'sketching the vending machine', 'the watercolor of the break room'],
-  kevin:    ['the snacks are NOT ready', 'why use many word when few work', 'me want break', 'cookie? cookie.'],
-  angela:   ['this break room is filthy', 'morale committee, 3pm sharp', 'I’m judging the fridge'],
-  oscar:    ['actually, it’s “espresso”', 'well, actually…', 'the snack budget is concerning'],
-  stanley:  ['is it snack o’clock?', 'leave the crossword out of this.', 'crossword and coffee. leave me be.', "I'll retire before this brews"],
-  phyllis:  ['someone’s picking me up at five', 'knitting and a nice cup of tea'],
-  andy:     ['a cappella, ever heard of it?', 'coffee break, harmonize!', 'Big Tuna, grab a chair'],
+  michael:  ['I AM the deadline.', 'no meetings before chai.', 'decent boss. allegedly.', 'my door is open. it blocks the hallway.'],
+  dwight:   ['wrong. try again.', 'efficiency is a lifestyle', 'that mug is NOT regulation.', 'this fridge needs a roster'],
+  jim:      ['...anyway.', 'moved the mouse again.', 'just here for the gossip', 'nobody saw anything.'],
+  pam:      ['toodooo, this is Priya', 'sketching the vending machine', 'chai break, visual notes'],
+  kevin:    ['the snacks are NOT ready', 'fewer bugs, more lunch', 'me want break', 'samosa? samosa.'],
+  angela:   ['this break room is filthy', 'token audit, 3pm sharp', 'I’m judging the fridge'],
+  oscar:    ['actually, it’s “filter coffee”', 'well, actually…', 'the snack budget is concerning'],
+  stanley:  ['is it lunch o’clock?', 'leave the crossword out of this.', 'crossword and chai. leave me be.', "I'll retire before this brews"],
+  phyllis:  ['someone’s picking me up at five', 'knitting and a nice cup of chai'],
+  andy:     ['standup karaoke, ever heard of it?', 'lunch break, harmonize!', 'Arjun, grab a chair'],
   kelly:    ['did you HEAR what happened??', 'so. much. to tell you.', 'I am the GOSSIP desk'],
-  ryan:     ['I’m kind of a big deal', 'the intern needs caffeine', 'starting a standup startup, actually'],
+  ryan:     ['I’m kind of a big deal', 'the intern needs chai', 'starting a standup startup, actually'],
   toby:     ['I should write that up…', 'HR-wise this break is fine', 'no one ever sits with me'],
-  creed:    ['which one of you is the new guy?', 'I’ve eaten worse out of that fridge', 'mung beans. under my desk.'],
-  meredith: ['is it 5 o’clock yet?', 'someone spike the coffee?'],
+  creed:    ['which one of you is the new guy?', 'I’ve eaten worse out of that fridge', 'pickles. under my desk.'],
+  meredith: ['is it 5 o’clock yet?', 'someone spike the chai?'],
 };
 
 /** A solo break-room line. Character flavour ~60% of the time, else the line
@@ -97,18 +97,18 @@ type Exchange = readonly string[];
 
 // Generic banter — works between any two agents.
 const EXCHANGES: readonly Exchange[] = [
-  ['world’s best boss.', 'you are. I had the mug made.', 'and I cherish it.'],
-  ['would a sensible person do this?', '...if yes, I don’t.', 'that’s my boy.'],
-  ['feared or loved? both. definitely both.', 'that’s beautiful.', 'I know.'],
+  ['best boss on the floor.', 'you are. I ordered the mug.', 'and I cherish it.'],
+  ['would a sensible person do this?', '...if yes, I don’t.', 'that’s our lead.'],
+  ['strict or chill? neither. paying attention.', 'that’s beautiful.', 'I know.'],
   ['I edited your wiki page again.', 'I know. thank you.'],
   ['question. how many coffees?', 'one.', 'that’s too many.'],
   ['fact: mondays are the worst.', 'fact: correct.', 'what is happening.'],
-  ['I grew up on instant coffee.', 'shocking.', '...not shocking at all.'],
+  ['I grew up on instant chai.', 'shocking.', '...not shocking at all.'],
   ['what does victory smell like?', 'fresh whiteboard markers.'],
   ['did you just throw your phone?', 'didn’t like what it said.', 'cool.'],
   ['is a hot dog a sandwich?', 'it is.', 'I know, right?'],
   ['three-hole-punch returns.', 'never gets old.'],
-  ['why few word when lot word?', '...genuinely profound.', 'I know.'],
+  ['say it short, say it once.', '...genuinely profound.', 'I know.'],
   ['I am not a bad person.', '...', 'not a great person either.', 'there it is.'],
   ['I love my plants more than people.', 'including us?', 'especially you.'],
   ['cats are better than dogs.', 'dogs are better.', '...sorry.'],
@@ -215,14 +215,14 @@ const PAIR_POOL: readonly Exchange[] = [...EXCHANGES, ...TABLE_TALK_EXCHANGES];
 // to open with their signature bit.
 const KEYED_EXCHANGES: Partial<Record<OfficeCharacterName, Exchange>> = {
   michael:  ['team huddle in five.', '...there it is.'],
-  dwight:   ['someone moved my mug.', 'nobody touched your mug, Dwight.'],
-  kevin:    ['why few word when lot word?', '...just use the words, Kevin.'],
+  dwight:   ['someone moved my mug.', 'nobody touched your mug, Vikram.'],
+  kevin:    ['say it short, say it once.', '...just use the words, Rohan.'],
   kelly:    ['okay don’t freak out, but—', 'I’m already freaking out.'],
   oscar:    ['well, actually—', '...here we go.'],
-  angela:   ['this table is filthy.', 'it’s a break room, Angela.'],
+  angela:   ['this table is filthy.', 'it’s a break room, Kavya.'],
   creed:    ['which one are you again?', '...we sit next to each other.'],
-  stanley:  ['is it snack o’clock?', 'no, Stanley.', '...noted.'],
-  andy:     ['a cappella, ever heard of it?', 'coffee break, harmonize!', 'Big Tuna, grab a chair'],
+  stanley:  ['is it lunch o’clock?', 'no, Mohan.', '...noted.'],
+  andy:     ['standup karaoke, ever heard of it?', 'lunch break, harmonize!', 'Arjun, grab a chair'],
   jim:      ['question.', 'yes.', 'nothing. just checking.'],
 };
 
