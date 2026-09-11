@@ -56,3 +56,15 @@ test('member list re-syncs with live PTYs on an interval', () => {
   assert.match(app, /setInterval\(sync, 15_000\)/, 'periodic reconcile gone');
   assert.match(app, /reconcileWithLivePtys\(list\.map\(\(p\) => p\.id\)\)/, 'reconcile call gone');
 });
+
+test('boot has no multi-second fixed waits before the team is usable', () => {
+  // Slow-load complaint: god bootstrap slept 1200ms and auto-restore 2500ms
+  // before doing anything. Readiness is polled downstream, so these are pure
+  // delay — the ratchet keeps them short.
+  const hive = read('src/renderer/src/hooks/useHive.ts');
+  assert.doesNotMatch(hive, /\}, 1200\);/, 'god bootstrap 1200ms wait is back');
+  assert.match(hive, /\}, 200\);/, 'god bootstrap wait missing');
+  const restore = read('src/renderer/src/hooks/useRestoreTeam.ts');
+  const m = restore.match(/AUTO_RESTORE_DELAY_MS = (\d+);/);
+  assert.ok(m && Number(m[1]) <= 800, 'auto-restore delay crept back up');
+});

@@ -28,9 +28,11 @@ const listeners = new Set<() => void>();
  *  App.tsx reconciles the persisted roster against the PTYs actually alive in
  *  the main process, and that is an async round trip. Firing before it lands
  *  would read a restorable list that still contains agents whose terminals are
- *  already running, and try to spawn duplicates of them. The delay is also the
- *  window in which you can hit a dismiss ✕ if you don't want an agent back. */
-export const AUTO_RESTORE_DELAY_MS = 2500;
+ *  already running, and try to spawn duplicates of them. The check only fires
+ *  on a non-empty list (which is reconcile's own aftermath), so 800ms is ample
+ *  grace — it is also the window for a dismiss ✕ if you don't want an agent
+ *  back (was 2500ms; the floor now restores ~1.7s sooner). */
+export const AUTO_RESTORE_DELAY_MS = 800;
 
 function emit(): void {
   for (const l of [...listeners]) l();

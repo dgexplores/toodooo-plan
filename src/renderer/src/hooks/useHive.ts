@@ -377,6 +377,10 @@ export function useHive(config: HarnessConfig | null): void {
     if (!config?.onboardingComplete || !config.harnessHome) return;
     let cancelled = false;
     useStore.getState().setGodStatus('booting');
+    // Boot fast: no fixed wait here — readiness is polled for real downstream
+    // (waitForTerminalReady gates the first submit), so waiting only delayed
+    // the floor. 200ms still absorbs mount/HMR double-effect storms; the
+    // godSpawning latch stops dupes regardless.
     const t = setTimeout(async () => {
       if (cancelled) return;
       const live = await window.cth.listPtys().catch(() => []);
@@ -470,7 +474,7 @@ export function useHive(config: HarnessConfig | null): void {
         } catch { /* PTY may have died during startup */ }
         finally { bootGraceUntil.current[GOD_ID] = 0; }
       })();
-    }, 1200);
+    }, 200);
     return () => { cancelled = true; clearTimeout(t); };
   }, [config?.onboardingComplete, config?.harnessHome]);
 
