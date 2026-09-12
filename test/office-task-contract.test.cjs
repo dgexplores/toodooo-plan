@@ -95,6 +95,16 @@ test('desk taps open the PC overview, never the terminal', () => {
   assert.match(read('src/renderer/src/App.tsx'), /<AgentPcOverlay \/>/, 'overlay not mounted');
 });
 
+test('monitor mood crossfades instead of snapping', () => {
+  const src = read('src/renderer/src/scene/office/DeskScreen.ts');
+  assert.match(src, /1 - Math\.exp\(-dt \* 6\)/, 'wash snaps instead of easing');
+});
+
+test('huddle arrivals greet', () => {
+  const src = read('src/renderer/src/scene/office/OfficeFloor.tsx');
+  assert.match(src, /rb\.character\.cheer\(\);/, 'no greeting on huddle form');
+});
+
 test('desk monitor mirrors owner state', () => {
   const desk = read('src/renderer/src/scene/office/DeskScreen.ts');
   assert.match(desk, /setMode\(mode: 'busy' \| 'alert' \| 'wait' \| 'idle'\)/,

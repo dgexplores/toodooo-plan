@@ -53,8 +53,8 @@ export class DeskScreen {
     // under it — same painter's order the map art implies.
     this.container.zIndex = (topLeft.y + 2) * ts - 1;
     this.container.visible = false;
-    // Clicking the monitor opens that agent's live terminal (same action as
-    // the roster's open-terminal row). No tap handler → fully inert.
+    // Clicking the monitor opens that agent's desk-PC overview (same action
+    // as the roster's PC button). No tap handler → fully inert.
     if (opts?.onTap) {
       this.container.eventMode = 'static';
       this.container.cursor = 'pointer';
@@ -81,18 +81,32 @@ export class DeskScreen {
     this.mode = mode;
   }
 
+  // Crossfaded mood wash: the tick eases the live color toward the mode
+  // target instead of snapping, so state changes breathe on the screen.
+  private washR = 0x4f; private washG = 0x9f; private washB = 0xaf;
+  private washA = 0.08;
+
   update(dt: number): void {
     if (!this.on) return;
     this.t += dt;
     const g = this.anim;
     g.clear();
     // Mood wash over the desktop so the state reads across the room.
-    const wash =
+    const target =
       this.mode === 'busy' ? { color: 0xf4d35e, alpha: 0.16 } :
       this.mode === 'alert' ? { color: 0xd96a62, alpha: 0.22 + 0.12 * Math.sin(this.t * 6) } :
       this.mode === 'wait' ? { color: 0x6d87d6, alpha: 0.14 } :
       { color: 0x4f9faf, alpha: 0.08 };
-    g.rect(SCREEN.x, SCREEN.y, SCREEN.w, SCREEN.h).fill(wash);
+    const k = 1 - Math.exp(-dt * 6);
+    const tr = (target.color >> 16) & 255, tg = (target.color >> 8) & 255, tb = target.color & 255;
+    this.washR += (tr - this.washR) * k;
+    this.washG += (tg - this.washG) * k;
+    this.washB += (tb - this.washB) * k;
+    this.washA += (target.alpha - this.washA) * k;
+    g.rect(SCREEN.x, SCREEN.y, SCREEN.w, SCREEN.h).fill({
+      color: (Math.round(this.washR) << 16) | (Math.round(this.washG) << 8) | Math.round(this.washB),
+      alpha: this.washA
+    });
     // Two faint "output" lines scrolling up the desktop, wrapping around —
     // the eternal build log — plus a cursor blinking in the lower left.
     // Busy scrolls fast, wait drifts, idle holds still.

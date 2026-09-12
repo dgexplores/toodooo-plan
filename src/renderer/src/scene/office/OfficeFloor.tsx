@@ -1831,6 +1831,9 @@ export function OfficeFloor() {
             const toB: Facing = toA === 'right' ? 'left' : toA === 'left' ? 'right' : toA === 'down' ? 'up' : 'down';
             rb.character.faceDirection(toA);
             ra.character.faceDirection(toB);
+            // The joiner hops hello on arrival (a no-op if somehow seated);
+            // the pair reads as meeting, not teleporting.
+            rb.character.cheer();
             if (line) {
               rb.character.showThought(line);
               ra.character.showThought(line);
