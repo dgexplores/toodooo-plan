@@ -960,7 +960,10 @@ export const useStore = create<State>((set, get) => ({
   // care (withTriggerDefaults), and handing the module-level default out is how
   // one careless mutation rewrites the default for everyone.
   orgTrigger: { ...DEFAULT_ORG_TRIGGER },
-  setOrgTrigger: (cfg) => set({ orgTrigger: cfg }),
+  // Callers pass redacted IPC shapes (no apiKey) and migrated old configs;
+  // normalize onto the default so the mirror invariant holds (apiKey always
+  // a string) no matter what shape arrived.
+  setOrgTrigger: (cfg) => set({ orgTrigger: { ...DEFAULT_ORG_TRIGGER, ...(cfg as OrgTriggerConfig) } }),
   enqueueMessage: (agentId, text, meta) =>
     set((s) => {
       const trimmed = text.trim();
@@ -1121,7 +1124,12 @@ export function selectedAgent(s: State): Agent | undefined {
 /** Whether the Command Center's Trigger History tab has anything to be about
  *  yet: an organisation key is set, or at least one webhook exists. Derived from
  *  the two mirrors rather than stored beside them, so it cannot fall out of step
- *  with the thing it describes. Use as `useStore(triggerHistoryVisible)`. */
+ *  with the thing it describes. Use as `useStore(triggerHistoryVisible)`.
+ *  Never throws: this runs inside CommandCenterPanel's render, so a malformed
+ *  mirror (migrated/old config, redacted IPC shape) must read as "nothing yet",
+ *  never blank the whole app. */
 export function triggerHistoryVisible(s: State): boolean {
-  return s.webhookTriggers.length > 0 || s.orgTrigger.apiKey.trim() !== '';
+  if (Array.isArray(s.webhookTriggers) && s.webhookTriggers.length > 0) return true;
+  const key = (s.orgTrigger as { apiKey?: unknown } | null | undefined)?.apiKey;
+  return typeof key === 'string' && key.trim() !== '';
 }
