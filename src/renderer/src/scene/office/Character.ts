@@ -106,6 +106,7 @@ export class Character {
   private workGlow: Graphics;
   private workGlowElapsed = 0;
   private glowOn = false;
+  private glowColor = 0;
 
   private overlay: Graphics;
   private statusGlyph: StatusGlyph = 'none';
@@ -495,6 +496,14 @@ export class Character {
     this.targetAlpha = alpha;
   }
   private targetAlpha = 1;
+
+  /** Recolor the work halo live (palette switch) without respawning. */
+  setGlowColor(color: number): void {
+    this.glowColor = color;
+    this.workGlow.clear();
+    this.workGlow.circle(0, 0, 14);
+    this.workGlow.fill({ color, alpha: 1 });
+  }
 
   private enableClick(): void {
     this.sprite.enableTap(() => this.onClick?.(this.agentId));

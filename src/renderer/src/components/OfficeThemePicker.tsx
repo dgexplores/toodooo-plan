@@ -8,9 +8,9 @@ import { PixelButton } from './PixelButton';
 import { Icon } from './Icon';
 import type { ThemeId } from '@/scene/office/themeRegistry';
 
-// TV-show office themes (Phase 1 = the switch flow infra). Only `office` has a
-// real map+cast today; the five shows render via the loader's office fallback
-// until their content lands (Phase 2). `built: false` shows a "soon" tag and a
+// Office theme picker. `office` and `social` are finished floors (plus the
+// precinct); the remaining shows render via the loader's office fallback
+// until their content lands. `built: false` shows a "soon" tag and a
 // fallback note on switch, but the destructive switch flow still runs so the
 // whole pipeline (modal → delete cast → persist → re-seat) is exercisable now.
 interface ThemeMeta { id: ThemeId; label: string; blurb: string; built: boolean; swatch: string; }
@@ -116,10 +116,10 @@ export function OfficeThemePicker({ config }: { config: HarnessConfig }) {
         </PixelButton>
       </div>
 
-      {/* Theme picker grid (only when the flag is on) */}
-      {enabled && (
-        <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-          {THEME_META.map((theme) => {
+      {/* Theme picker grid: finished floors always; unbuilt TV-show shells
+          appear only behind the experimental flag. */}
+      <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+        {(enabled ? THEME_META : THEME_META.filter((t) => t.built)).map((theme) => {
             const isCurrent = theme.id === current;
             return (
               <button
@@ -163,10 +163,9 @@ export function OfficeThemePicker({ config }: { config: HarnessConfig }) {
               </button>
             );
           })}
-        </div>
-      )}
+      </div>
 
-      {enabled && note && (
+      {note && (
         <div style={{ marginTop: 10, fontSize: 12, color: 'var(--cth-ink-500)' }}>{note}</div>
       )}
 

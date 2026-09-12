@@ -1478,8 +1478,9 @@ export function OfficeFloor() {
           seatTile,
           seatDirection: facingForSeat(seatTile),
           spawnTile: entrance, // walk in from the office door
-          // The boss glows brand gold; everyone else glows their accent (or shirt).
-          glowColor: agent.isGod ? colors.brand.gold : (hexNum(colors.accent[agent.accent]) ?? hexToNumber(member.shirt)),
+          // The boss glows the LIVE brand color (follows the Settings palette
+          // switch instantly); everyone else glows their accent (or shirt).
+          glowColor: agent.isGod ? liveBrandGold() : (hexNum(colors.accent[agent.accent]) ?? hexToNumber(member.shirt)),
           onClick: openAgentPc,
         });
         character.show(charLayer);
@@ -1878,6 +1879,22 @@ export function OfficeFloor() {
       });
       resize.observe(host);
       (app as any).__resize = resize;
+      // Follow the brand palette live: when Settings flips the colorway, the
+      // boss halo repaints at once — no respawn, no reload. Workers keep
+      // their own accents; only the boss wears the brand.
+      const brandWatch = new MutationObserver(() => {
+        const c = liveBrandGold();
+        const ids = useStore.getState().agents.filter((a) => a.isGod).map((a) => a.id);
+        for (const rt of runtimes.values()) {
+          if (ids.includes(rt.character.agentId)) rt.character.setGlowColor(c);
+        }
+      });
+      try {
+        brandWatch.observe(document.documentElement, {
+          attributes: true, attributeFilter: ['data-cth-palette', 'data-cth-theme']
+        });
+      } catch { /* non-DOM harness (tests) — glow stays spawn-time */ }
+      (app as any).__brandWatch = brandWatch;
       // The floor is up: give the next crowded start-up a full budget again.
       initRetriesRef.current = 0;
     };
@@ -1922,6 +1939,7 @@ export function OfficeFloor() {
       if (a) {
         (a as any).__glRecovery?.();
         (a as any).__resize?.disconnect?.();
+        try { (a as any).__brandWatch?.disconnect?.(); } catch { /* noop */ }
         try { (a as any).__unsub?.(); } catch { /* noop */ }
         try { (a as any).__offMessage?.(); } catch { /* noop */ }
         try { clearInterval((a as any).__taskBoardPoll); } catch { /* noop */ }
@@ -1957,6 +1975,18 @@ function floorNote(text: string): HTMLDivElement {
   return note;
 }
 function hexNum(n: number): number { return n; }
+
+/** Live brand color from the active palette (Settings → Appearance), as a
+ *  Pixi hex number. Falls back to token gold where CSS is unreachable
+ *  (tests, SSR). Read at spawn/glow time, not per frame. */
+function liveBrandGold(): number {
+  try {
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--cth-brand').trim();
+    const m = /^#([0-9a-fA-F]{6})$/.exec(v);
+    if (m) return parseInt(m[1], 16);
+  } catch { /* fall through to token gold */ }
+  return colors.brand.gold;
+}
 function hex(n: number): string { return '#' + n.toString(16).padStart(6, '0'); }
 function safeDestroy(app: Application) {
   try { app.ticker?.stop(); } catch { /* noop */ }

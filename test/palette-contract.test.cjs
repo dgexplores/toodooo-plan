@@ -43,3 +43,18 @@ test('settings exposes the switch', () => {
   assert.match(src, /PALETTES\.map\(\(p\) =>/, 'swatch row missing');
   assert.match(src, /setAppPalette\(p\.id\)/, 'switch unwired');
 });
+
+test('boss glow follows the palette live, no respawn', () => {
+  const floor = read('src/renderer/src/scene/office/OfficeFloor.tsx');
+  assert.match(floor, /glowColor: agent\.isGod \? liveBrandGold\(\)/, 'god glow not live');
+  assert.match(floor, /brandWatch\.observe\(document\.documentElement/, 'no palette watcher');
+  assert.match(floor, /__brandWatch\?\.disconnect/, 'watcher leaks on unmount');
+  assert.match(read('src/renderer/src/scene/office/Character.ts'),
+    /setGlowColor\(color: number\)/, 'glow recolor missing');
+});
+
+test('finished floors show without the experimental flag', () => {
+  const src = read('src/renderer/src/components/OfficeThemePicker.tsx');
+  assert.match(src, /\(enabled \? THEME_META : THEME_META\.filter\(\(t\) => t\.built\)\)\.map/,
+    'built themes still gated');
+});
