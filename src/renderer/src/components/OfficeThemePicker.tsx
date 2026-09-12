@@ -55,7 +55,7 @@ export function OfficeThemePicker({ config }: { config: HarnessConfig }) {
         }
       }
       for (const a of victims) archiveAgent(a.id);
-      await window.cth.updateConfig({ officeTheme: id });
+      await window.cth.updateConfig({ officeTheme: id as 'office' | 'social' });
       setCurrent(id);
       setOfficeTheme(id); // → OfficeFloor rebuilds the scene on the new map/cast
     } catch (e) {
