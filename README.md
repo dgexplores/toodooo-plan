@@ -31,11 +31,19 @@ one screen instead of babysitting twelve terminals.
   behind Advanced.
 - **Simple Command Center** — six daily tabs (terminal, monitor, tasks,
   ask me, workers, spend); power tabs hide behind More.
-- **Full Hindi UI** (1210 strings, enforced by CI) plus English, العربية
+- **Full Hindi UI** (1239 strings, enforced by CI) plus English, العربية
   and 中文.
 - **Avatars that read true** — typing, reading, coffee breaks, cheers,
   blocked-at-the-door; installing agents show as installing, dead ones
   leave the floor.
+- **Boss PC per employee** — click any avatar or desk monitor: live status,
+  assigned cards, done split by day, recent work. Terminal stays separate.
+- **Social floor** — Head Office plus a Social Floor theme (pool hall,
+  ping-pong, lounge, coffee bar): idle duos gather to huddle, agents take
+  pool and table-tennis breaks. Switch in Settings → Office Theme.
+- **Huddle tab** — who talks to whom, hot first, with per-pair threads.
+- **Palette colorways** — gold, teal, ember in Settings → Appearance;
+  Deepak's halo follows instantly. Status colors never move.
 
 ## Features
 
@@ -84,7 +92,7 @@ only the day someone else pays for the app. Until then: pay nothing.
 - **Vector memory** — free path is local embeddings; keyword + BM25 today.
 - **WhatsApp live traffic** — panel + tunnel done; needs your free Meta dev
   app + number.
-- **Recorded debts** — catalog branch pin, custom icon/art, export-picker UI,
+- **Recorded debts** — catalog branch pin, export-picker UI,
   trigger/org vault, weekly digest, perf evidence from real usage.
 
 ## Docs
