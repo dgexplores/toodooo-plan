@@ -32,6 +32,17 @@ test('power controls hide in simple mode, nothing else', () => {
     'provider picker must stay visible in simple mode');
 });
 
+test('huddle director gathers hot pairs, work preempts', () => {
+  const src = read('src/renderer/src/scene/office/OfficeFloor.tsx');
+  assert.match(src, /st\.hotPairs \?\? \[\]/, 'director does not read hotPairs');
+  assert.match(src, /rb\.character\.walkToAndThen\(dest/, 'pair never walks together');
+  assert.match(src, /if \(isBusy\) releaseHuddlesFor\(agent\.id\)/, 'work does not preempt huddles');
+  assert.match(src, /updateHuddles\(\);/, 'director not on the tick');
+  assert.match(src, /HUDDLE_COOLDOWN_MS = 120_000/, 'cooldown missing');
+  const tab = read('src/renderer/src/components/HuddleTab.tsx');
+  assert.match(tab, /setHotPairs\(hot\)/, 'tab does not publish hot pairs');
+});
+
 test('huddle tab registered on existing bridges only', () => {
   const src = read('src/renderer/src/components/CommandCenterPanel.tsx');
   assert.match(src, /\{ key: 'huddle', labelKey: 'commandCenter\.tabs\.huddle'/, 'tab not registered');
@@ -39,6 +50,8 @@ test('huddle tab registered on existing bridges only', () => {
   const tab = read('src/renderer/src/components/HuddleTab.tsx');
   assert.match(tab, /window\.cth\.hiveLog\(200\)/, 'huddle must read hiveLog, not new IPC');
   assert.match(tab, /buildHuddles\(log, agents\.map/, 'huddle must aggregate via shared helper');
+  assert.match(tab, /buildThread\(aMsgs as ThreadMsg\[\], bMsgs as ThreadMsg\[\], h\.a, h\.b\)/,
+    'expanded pair must merge inbox threads, not new IPC');
 });
 
 test('submit path is shared between modes', () => {

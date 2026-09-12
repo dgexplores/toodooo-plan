@@ -1474,6 +1474,7 @@
   "huddle": {
     "empty": "No exchanges yet — pairs appear once agents message each other.",
     "msgs": "{{count}} msgs",
-    "noSubject": "(no subject)"
+    "noSubject": "(no subject)",
+    "loading": "loading…"
   }
 }

@@ -264,6 +264,11 @@ interface State {
   pcAgentId: string | null;
   openPc: (id: string) => void;
   closePc: () => void;
+  /** Hot pairs for the floor huddle director: agent duos actively messaging
+   *  (last exchange < 2 min). Ephemeral, never persisted — the HuddleTab poll
+   *  refreshes it; the floor reads it in-tick without subscribing. */
+  hotPairs: { a: string; b: string; subject?: string }[];
+  setHotPairs: (pairs: { a: string; b: string; subject?: string }[]) => void;
   /** One-shot prefill for the Command Center's dispatch box (a task detail's
    *  "assign" from anywhere in the app). seq-keyed like ccTabRequest. */
   dispatchSeedRequest: { text: string; seq: number } | null;
@@ -927,6 +932,11 @@ export const useStore = create<State>((set, get) => ({
   pcAgentId: null,
   openPc: (id) => set({ pcAgentId: id }),
   closePc: () => set({ pcAgentId: null }),
+  /** Hot pairs for the floor huddle director: agent duos actively messaging
+   *  (last exchange < 2 min). Ephemeral, never persisted — the HuddleTab poll
+   *  refreshes it; the floor reads it in-tick without subscribing. */
+  hotPairs: [] as { a: string; b: string; subject?: string }[],
+  setHotPairs: (pairs: { a: string; b: string; subject?: string }[]) => set({ hotPairs: pairs }),
   dispatchSeedRequest: null,
   requestDispatchSeed: (text) =>
     set((s) => ({ dispatchSeedRequest: { text, seq: (s.dispatchSeedRequest?.seq ?? 0) + 1 } })),

@@ -273,8 +273,22 @@ export function OfficeFloor() {
     const app = new Application();
     appRef.current = app;
 
-    const runtimes = new Map<string, Runtime>();
-    const seatClaims = new Set<number>();
+      const runtimes = new Map<string, Runtime>();
+      const seatClaims = new Set<number>();
+      // Huddle ownership state (the director itself lives just above onTick).
+      // Defined up here because syncAgents→applyState can release a huddle
+      // before the first tick ever runs — a later const would TDZ-crash it.
+      const huddles = new Map<string, { until: number }>();
+      const huddleCooldowns = new Map<string, number>();
+      const HUDDLE_MS = 30_000;
+      const HUDDLE_COOLDOWN_MS = 120_000;
+      const pairKeyOf = (a: string, b: string): string => (a < b ? `${a} ${b}` : `${b} ${a}`);
+      /** Drop every huddle containing this agent (real work preempts). */
+      const releaseHuddlesFor = (id: string): void => {
+        for (const key of Array.from(huddles.keys())) {
+          if (key === id || key.startsWith(`${id} `) || key.endsWith(` ${id}`)) huddles.delete(key);
+        }
+      };
     // In-flight message envelopes (sender desk → recipient desk). Capped so a
     // broadcast doesn't bury the floor in paper.
     const envelopes: MessageEnvelope[] = [];
@@ -1514,6 +1528,9 @@ export function OfficeFloor() {
         const wasBusy = rt.prevStatus === 'working' || rt.prevStatus === 'thinking' || rt.prevStatus === 'compacting';
         const isBusy = agent.status === 'working' || agent.status === 'thinking' || agent.status === 'compacting';
         if (isBusy && !wasBusy) rt.busySince = Date.now();
+        // Huddle ownership: real work preempts a huddle instantly — the pair
+        // re-forms after, via the director, if still hot and idle.
+        if (isBusy) releaseHuddlesFor(agent.id);
         const finishedWork = !force && !agent.isGod
           && wasBusy && (agent.status === 'idle' || agent.status === 'success')
           && rt.busySince !== undefined && Date.now() - rt.busySince >= CHEER_MIN_BUSY_MS;
@@ -1733,6 +1750,78 @@ export function OfficeFloor() {
         }
       };
 
+      // ── Huddle director: hot pairs (messaging within the last 2 min, fed by
+      //  the HuddleTab poll via store.hotPairs) gather face-to-face while BOTH
+      //  are idle. Same ownership contract as breaks/errands: real work cancels
+      //  it instantly (applyState releases on any non-idle status), 30s huddles,
+      //  2 min cooldown per pair, one huddle per agent at a time.
+      const updateHuddles = (): void => {
+        const now = Date.now();
+        const st = useStore.getState();
+        const busyIds = new Set<string>();
+        for (const h of huddles.keys()) {
+          const [x, y] = h.split(' ');
+          busyIds.add(x); busyIds.add(y);
+        }
+        // Expire finished huddles first so their agents free up below. Only
+        // send genuinely-idle agents back to roaming — a busy one was already
+        // released by applyState and must not be yanked off its desk.
+        for (const [key, h] of Array.from(huddles)) {
+          if (now < h.until) continue;
+          huddles.delete(key);
+          for (const id of key.split(' ')) {
+            const rt = runtimes.get(id);
+            const s = st.agents.find((a) => a.id === id);
+            if (rt && !rt.brk && !rt.err && !rt.run &&
+              (s?.status === 'idle' || s?.status === 'success')) rt.character.startWandering();
+          }
+        }
+        for (const p of st.hotPairs ?? []) {
+          const key = pairKeyOf(p.a, p.b);
+          if (huddles.has(key)) continue;
+          if (busyIds.has(p.a) || busyIds.has(p.b)) continue;
+          if ((huddleCooldowns.get(key) ?? 0) > now) continue;
+          const ra = runtimes.get(p.a);
+          const rb = runtimes.get(p.b);
+          if (!ra || !rb || ra.brk || ra.err || ra.run || rb.brk || rb.err || rb.run) continue;
+          const sa = st.agents.find((a) => a.id === p.a);
+          const sb = st.agents.find((a) => a.id === p.b);
+          const free = (s?: { status?: string }): boolean =>
+            !!s && (s.status === 'idle' || s.status === 'success');
+          if (!free(sa) || !free(sb)) continue;
+          // B joins A where A stands: a neighbour tile, rotated per pair so a
+          // walled-off side doesn't wedge every attempt on the same tile. An
+          // unreachable pick dies silently inside walkToAndThen (no error);
+          // the attempt still consumes the cooldown so a walled-off pair
+          // doesn't spam a pathfind every tick.
+          const ta = ra.character.getTilePosition();
+          const options: Tile[] = [
+            { x: ta.x + 1, y: ta.y }, { x: ta.x - 1, y: ta.y },
+            { x: ta.x, y: ta.y + 1 }, { x: ta.x, y: ta.y - 1 }
+          ];
+          let hash = 0;
+          for (const ch of key) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
+          const dest = options[Math.abs(hash) % options.length];
+          const line = (p.subject ?? '').trim().slice(0, 120) || undefined;
+          huddles.set(key, { until: now + HUDDLE_MS });
+          huddleCooldowns.set(key, now + HUDDLE_MS + HUDDLE_COOLDOWN_MS);
+          busyIds.add(p.a); busyIds.add(p.b);
+          rb.character.walkToAndThen(dest, () => {
+            const tb = rb.character.getTilePosition();
+            const dx = ta.x - tb.x, dy = ta.y - tb.y;
+            const toA: Facing = Math.abs(dx) > Math.abs(dy)
+              ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+            const toB: Facing = toA === 'right' ? 'left' : toA === 'left' ? 'right' : toA === 'down' ? 'up' : 'down';
+            rb.character.faceDirection(toA);
+            ra.character.faceDirection(toB);
+            if (line) {
+              rb.character.showThought(line);
+              ra.character.showThought(line);
+            }
+          });
+        }
+      };
+
       const onTick = (ticker: Ticker) => {
         const dt = ticker.deltaMS / 1000;
         camera.update(dt);
@@ -1746,6 +1835,7 @@ export function OfficeFloor() {
         updateCafeteria(dt);
         updateCoffeeRuns(dt);
         updateErrands(dt);
+        updateHuddles();
         updateBossAura(dt);
         updateDeskLife(dt);
         updateBoardMoves(dt);

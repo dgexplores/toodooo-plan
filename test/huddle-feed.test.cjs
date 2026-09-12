@@ -7,7 +7,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const loadTs = require('./load-ts.cjs');
 
-const { buildHuddles } = loadTs('src/shared/huddleFeed.ts');
+const { buildHuddles, buildThread } = loadTs('src/shared/huddleFeed.ts');
 
 const msg = (from, to, subject, ts, extra = {}) => ({
   kind: 'message', from, to, subject, ts, act: 'inform', ...extra
@@ -46,4 +46,31 @@ test('recent subjects newest-first, capped at five', () => {
   const out = buildHuddles(log, ['a', 'b']);
   assert.equal(out[0].recent.length, 5);
   assert.deepEqual(out[0].recent.map((r) => r.subject), ['s8', 's7', 's6', 's5', 's4']);
+});
+
+const tm = (from, to, subject, created_at) => ({ from, to, subject, act: 'inform', created_at });
+
+test('thread merges both inboxes, dedupes, newest first', () => {
+  const aInbox = [
+    tm('b', 'a', 'two', '2026-09-02T10:01:00.000Z'),
+    tm('c', 'a', 'other', '2026-09-02T10:05:00.000Z')
+  ];
+  const bInbox = [
+    tm('a', 'b', 'one', '2026-09-02T10:00:00.000Z'),
+    tm('b', 'a', 'two', '2026-09-02T10:01:00.000Z')
+  ];
+  const out = buildThread(aInbox, bInbox, 'a', 'b');
+  assert.equal(out.length, 2);
+  assert.deepEqual(out.map((l) => l.subject), ['two', 'one']);
+});
+
+test('undated lines sort last but still show', () => {
+  const out = buildThread(
+    [{ from: 'b', to: 'a', subject: 'mystery' }],
+    [tm('a', 'b', 'dated', '2026-09-02T10:00:00.000Z')],
+    'a', 'b'
+  );
+  assert.equal(out.length, 2);
+  assert.equal(out[0].subject, 'dated');
+  assert.equal(out[1].subject, 'mystery');
 });

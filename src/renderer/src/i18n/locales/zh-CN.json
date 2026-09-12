@@ -1474,6 +1474,7 @@
   "huddle": {
     "empty": "暂无交流——智能体互发消息后成对出现。",
     "msgs": "{{count}} 条消息",
-    "noSubject": "（无主题）"
+    "noSubject": "（无主题）",
+    "loading": "加载中……"
   }
 }
