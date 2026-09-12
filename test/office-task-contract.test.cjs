@@ -56,13 +56,16 @@ test('PC done splits by finish day', () => {
   assert.match(src, /if \(!iso\) return 'earlier';/, 'missing stamps must group as earlier');
 });
 
-test('PC overview is a boss dashboard: flip, stats, grid', () => {
+test('PC overview is a boss dashboard: flip, record, grid', () => {
   const src = read('src/renderer/src/components/AgentPcOverlay.tsx');
   assert.match(src, /openPc\(agents\[\(idx \+ dir \+ agents\.length\) % agents\.length\]\.id\)/,
     'team flip-through missing');
   assert.match(src, /gridTemplateColumns: '1fr 1fr'/, 'two-column layout missing');
-  assert.match(src, /agentPc\.context/, 'context meter missing');
-  assert.match(src, /agentPc\.now/, 'now section missing');
+  assert.match(src, /function RecordRow/, 'service record missing');
+  assert.doesNotMatch(src, /function Stat\(/, 'hero-metric cards back');
+  assert.match(src, /className="cth-pop"/, 'entrance moment missing');
+  assert.match(read('src/renderer/src/design/global.css'), /::selection \{ background: var\(--cth-brand\)/,
+    'themed selection missing');
 });
 
 test('avatar and monitor taps use explicit hit geometry', () => {

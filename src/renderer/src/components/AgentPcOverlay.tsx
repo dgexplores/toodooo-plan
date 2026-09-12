@@ -102,7 +102,7 @@ export function AgentPcOverlay() {
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24
       }}
     >
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 760, maxWidth: '96vw', maxHeight: '90vh', display: 'flex' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 760, maxWidth: '96vw', maxHeight: '90vh', display: 'flex' }} className="cth-pop">
         <PixelPanel variant="dialog" title={`${agent.name} — PC`} noPadding style={{ display: 'flex', flexDirection: 'column', width: '100%', minHeight: 0 }}>
           {/* Header band: flip through the team without closing */}
           <div style={{
@@ -121,28 +121,38 @@ export function AgentPcOverlay() {
           </div>
 
           <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0, overflowY: 'auto' }}>
-            {/* Stat strip: how much done, how much open, live context */}
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Stat label={t('agentPc.done')} value={String(done.length)} accent="var(--cth-mint)" />
-              <Stat label={t('agentPc.list')} value={String(open.length)} accent="var(--cth-lemon)" />
-              <div style={{
-                flex: 1, padding: '6px 10px', background: 'var(--cth-paper-100)',
-                boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
-                display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'center'
-              }}>
-                <span style={{ fontFamily: 'var(--cth-font-display)', fontSize: 8, color: 'var(--cth-ink-500)' }}>
+            {/* Service record — one framed status window (Earthbound manual
+                style), not metric cards: done / open / live context rows. */}
+            <div style={{
+              padding: '8px 10px', background: 'var(--cth-paper-100)',
+              boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
+              display: 'flex', flexDirection: 'column', gap: 6
+            }}>
+              <RecordRow
+                dot="var(--cth-mint)"
+                label={t('agentPc.done')}
+                value={String(done.length)}
+              />
+              <RecordRow
+                dot="var(--cth-lemon)"
+                label={t('agentPc.list')}
+                value={String(open.length)}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 8, height: 8, background: 'var(--cth-sky)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)', flexShrink: 0 }} />
+                <span style={{ fontFamily: 'var(--cth-font-ui)', fontSize: 12, color: 'var(--cth-ink-900)', width: 88, flexShrink: 0 }}>
                   {t('agentPc.context')}
                 </span>
                 {ctxPct !== null ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{ flex: 1, height: 8, background: 'var(--cth-cream-200)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)' }}>
-                      <div style={{
-                        width: `${ctxPct}%`, height: '100%',
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
+                    <span style={{ flex: 1, height: 8, background: 'var(--cth-cream-200)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)' }}>
+                      <span style={{
+                        display: 'block', width: `${ctxPct}%`, height: '100%',
                         background: ctxPct >= 88 ? 'var(--cth-coral)' : ctxPct >= 75 ? 'var(--cth-lemon)' : 'var(--cth-mint)'
                       }} />
-                    </div>
+                    </span>
                     <span style={{ fontFamily: 'var(--cth-font-mono)', fontSize: 11, color: 'var(--cth-ink-900)' }}>{ctxPct}%</span>
-                  </div>
+                  </span>
                 ) : (
                   <span style={{ fontSize: 11, color: 'var(--cth-ink-300)' }}>{t('agentPc.noContext')}</span>
                 )}
@@ -209,18 +219,14 @@ function FlipBtn({ dir, label, onFlip }: { dir: string; label: string; onFlip: (
   );
 }
 
-function Stat({ label, value, accent }: { label: string; value: string; accent: string }) {
+function RecordRow({ dot, label, value }: { dot: string; label: string; value: string }) {
   return (
-    <div style={{
-      minWidth: 96, padding: '6px 10px', background: 'var(--cth-paper-100)',
-      boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
-      display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-start'
-    }}>
-      <span style={{ fontFamily: 'var(--cth-font-display)', fontSize: 8, color: 'var(--cth-ink-500)' }}>{label}</span>
-      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ width: 8, height: 8, background: accent, boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)' }} />
-        <span style={{ fontFamily: 'var(--cth-font-mono)', fontSize: 18, color: 'var(--cth-ink-900)' }}>{value}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{ width: 8, height: 8, background: dot, boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)', flexShrink: 0 }} />
+      <span style={{ fontFamily: 'var(--cth-font-ui)', fontSize: 12, color: 'var(--cth-ink-900)', width: 88, flexShrink: 0 }}>
+        {label}
       </span>
+      <span style={{ fontFamily: 'var(--cth-font-mono)', fontSize: 14, color: 'var(--cth-ink-900)' }}>{value}</span>
     </div>
   );
 }
