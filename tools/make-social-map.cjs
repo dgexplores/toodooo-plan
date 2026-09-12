@@ -69,6 +69,20 @@ set(lay['furniture-below'], 16, 7, T(7, 1));
 set(lay.collision, 16, 6, 1);
 set(lay.collision, 16, 7, 1);
 
+// 8. Lounge extension (second wave): rug row y7, second sofa facing north,
+//    coffee bar 2x2, trophy. All on tiles verified open in the office map.
+for (let x = 9; x <= 13; x++) set(lay.floor, x, 7, T(x % 2, 2 + (7 % 2)));
+set(lay['furniture-below'], 10, 7, T(5, 0));
+set(lay['furniture-below'], 11, 7, T(6, 0));
+set(lay.collision, 10, 7, 1);
+set(lay.collision, 11, 7, 1);
+for (const [cx, cy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+  set(lay['furniture-below'], 12 + cx, 6 + cy, T(3 + cx, 2 + cy));
+  set(lay.collision, 12 + cx, 6 + cy, 1);
+}
+set(lay['furniture-below'], 15, 6, T(5, 1));
+set(lay.collision, 15, 6, 1);
+
 // 7. Viewing stands (walkable — no collision change). Full object shape mirrors
 // the map's own spawns (the loader keys on name).
 const spawns = lay['spawn-points'].objects;

@@ -66,6 +66,13 @@ test('social map keeps office geometry, adds the chill room', () => {
   assert.equal(at('furniture-below', 10, 6), 2454);
   assert.equal(at('furniture-below', 16, 6), 2456);
   assert.equal(at('floor', 9, 4), 2465);
+  // Lounge extension: second sofa, coffee bar, trophy, rug row.
+  assert.equal(at('furniture-below', 10, 7), 2454);
+  assert.equal(at('furniture-below', 12, 6), 2468);
+  assert.equal(at('furniture-below', 13, 7), 2477);
+  assert.equal(at('furniture-below', 15, 6), 2462);
+  assert.equal(at('collision', 12, 7), 1);
+  assert.equal(at('collision', 14, 6), 0);
   assert.equal(at('collision', 11, 4), 1);
   assert.equal(at('collision', 9, 5), 0);
   const spawns = social.layers.find((l) => l.name === 'spawn-points').objects;
