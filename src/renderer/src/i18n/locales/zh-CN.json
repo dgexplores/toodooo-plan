@@ -258,7 +258,9 @@
       "privacyBlurb": "Every network surface in the app, and what each is allowed to do. Pinned by CI — a new listener fails the build until it lands here.",
       "privacyScope": "Scope",
       "privacyAuth": "Gate",
-      "privacyPromises": "Promises"
+      "privacyPromises": "Promises",
+      "appearance": "外观",
+      "appearanceDesc": "高亮、老板强调和选区的品牌颜色。状态颜色不变。"
     },
     "agentsModels": {
       "defaultModel": "默认智能体模型",

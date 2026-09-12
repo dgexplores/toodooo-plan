@@ -20,6 +20,7 @@ import { SettingsHeroCard } from './SettingsHeroCard';
 import { SetupPanel } from './SetupPanel';
 import { Icon } from './Icon';
 import { OfficeThemePicker } from './OfficeThemePicker';
+import { PALETTES, setAppPalette, useAppPalette } from '@/design/palette';
 import { McpDefaultsSettings } from './McpDefaultsSettings';
 import { IntegrationsRegistry } from './IntegrationsRegistry';
 import { AiEnginesSettings } from './AiEnginesSettings';
@@ -265,6 +266,7 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
     stage({ strongKeepalive: next } as Partial<HarnessConfig>);
   };
   const [simpleMode, setSimpleMode] = useState<boolean>(cfgX.audience === 'non-technical');
+  const paletteNow = useAppPalette();
   // Renderer-local, not part of HarnessConfig — it only changes how this window
   // paints pty output. Read once; the setter keeps localStorage in step.
   const [arabicTerminal, setArabicTerminal] = useState(isArabicTerminalEnabled);
@@ -1057,6 +1059,39 @@ export function SettingsModal({ config, onClose, initialSection }: SettingsModal
                           answer, and the toolbar chip says nothing at all when
                           the answer is yes. */}
                       <UpdatesSection />
+
+                      <div style={{ height: 1, background: 'var(--cth-ink-300)' }} />
+
+                      {/* Appearance — brand colorway for highlights, boss
+                          accents and selection. Status hues never move. */}
+                      <div>
+                        <div style={sectionHead}>
+                          {t('settings.general.appearance')}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <span style={{ flex: 1, fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>
+                            {t('settings.general.appearanceDesc')}
+                          </span>
+                          <span style={{ display: 'inline-flex', gap: 6 }}>
+                            {PALETTES.map((p) => (
+                              <button
+                                key={p.id}
+                                onClick={() => setAppPalette(p.id)}
+                                title={p.id}
+                                aria-label={p.id}
+                                aria-pressed={paletteNow === p.id}
+                                style={{
+                                  width: 26, height: 26, padding: 0, cursor: 'pointer',
+                                  background: p.swatch, border: 'none',
+                                  boxShadow: paletteNow === p.id
+                                    ? 'inset 0 0 0 2px var(--cth-ink-900)'
+                                    : 'inset 0 0 0 1px var(--cth-ink-300)'
+                                }}
+                              />
+                            ))}
+                          </span>
+                        </div>
+                      </div>
 
                       <div style={{ height: 1, background: 'var(--cth-ink-300)' }} />
 
