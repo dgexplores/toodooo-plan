@@ -78,13 +78,26 @@ export class DeskScreen {
   /** Mirror the owner's state on the monitor. Cheap (a field); the tick
    *  renders it. Call on avatar state changes, not per frame. */
   setMode(mode: 'busy' | 'alert' | 'wait' | 'idle'): void {
+    if (mode === this.mode) return;
+    // Snapshot the live wash as the transition start (pixel world: stepped,
+    // never eased — see update).
+    this.fromR = this.washR; this.fromG = this.washG;
+    this.fromB = this.washB; this.fromA = this.washA;
+    this.modeT0 = this.t;
     this.mode = mode;
   }
 
-  // Crossfaded mood wash: the tick eases the live color toward the mode
-  // target instead of snapping, so state changes breathe on the screen.
+  // Stepped mood transition: 3 discrete frames over ~120ms (steps(2) like the
+  // chrome), never an exponential blend — easing is not pixel style.
+
+  // Stepped mood wash: 3 discrete frames toward the mode target — pixel
+  // style snaps between poses, never eases. from*/modeT0 snapshot the wash
+  // at each setMode so the steps start from the live color.
   private washR = 0x4f; private washG = 0x9f; private washB = 0xaf;
   private washA = 0.08;
+  private fromR = 0x4f; private fromG = 0x9f; private fromB = 0xaf;
+  private fromA = 0.08;
+  private modeT0 = 0;
 
   update(dt: number): void {
     if (!this.on) return;
@@ -92,17 +105,20 @@ export class DeskScreen {
     const g = this.anim;
     g.clear();
     // Mood wash over the desktop so the state reads across the room.
+    // Stepped transition (3 frames over ~120ms, like the chrome's steps(2)):
+    // pixel style snaps between poses, never eases through them.
     const target =
       this.mode === 'busy' ? { color: 0xf4d35e, alpha: 0.16 } :
       this.mode === 'alert' ? { color: 0xd96a62, alpha: 0.22 + 0.12 * Math.sin(this.t * 6) } :
       this.mode === 'wait' ? { color: 0x6d87d6, alpha: 0.14 } :
       { color: 0x4f9faf, alpha: 0.08 };
-    const k = 1 - Math.exp(-dt * 6);
+    const step = Math.min(2, Math.floor((this.t - this.modeT0) / 0.06));
+    const p = step / 2;
     const tr = (target.color >> 16) & 255, tg = (target.color >> 8) & 255, tb = target.color & 255;
-    this.washR += (tr - this.washR) * k;
-    this.washG += (tg - this.washG) * k;
-    this.washB += (tb - this.washB) * k;
-    this.washA += (target.alpha - this.washA) * k;
+    this.washR = this.fromR + (tr - this.fromR) * p;
+    this.washG = this.fromG + (tg - this.fromG) * p;
+    this.washB = this.fromB + (tb - this.fromB) * p;
+    this.washA = this.fromA + (target.alpha - this.fromA) * p;
     g.rect(SCREEN.x, SCREEN.y, SCREEN.w, SCREEN.h).fill({
       color: (Math.round(this.washR) << 16) | (Math.round(this.washG) << 8) | Math.round(this.washB),
       alpha: this.washA

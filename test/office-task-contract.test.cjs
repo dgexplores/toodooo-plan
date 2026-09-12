@@ -95,9 +95,10 @@ test('desk taps open the PC overview, never the terminal', () => {
   assert.match(read('src/renderer/src/App.tsx'), /<AgentPcOverlay \/>/, 'overlay not mounted');
 });
 
-test('monitor mood crossfades instead of snapping', () => {
+test('monitor mood steps in pixel frames, never eases', () => {
   const src = read('src/renderer/src/scene/office/DeskScreen.ts');
-  assert.match(src, /1 - Math\.exp\(-dt \* 6\)/, 'wash snaps instead of easing');
+  assert.match(src, /Math\.floor\(\(this\.t - this\.modeT0\) \/ 0\.06\)/, 'wash transition not stepped');
+  assert.doesNotMatch(src, /Math\.exp\(-dt/, 'exponential easing breaks pixel style');
 });
 
 test('huddle arrivals greet', () => {
