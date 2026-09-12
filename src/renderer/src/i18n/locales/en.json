@@ -1461,6 +1461,11 @@
     "quiet": "Quiet so far.",
     "today": "Today",
     "yesterday": "Yesterday",
-    "earlier": "Earlier"
+    "earlier": "Earlier",
+    "now": "Now",
+    "context": "Context",
+    "noContext": "No reading yet.",
+    "prev": "Previous employee",
+    "next": "Next employee"
   }
 }

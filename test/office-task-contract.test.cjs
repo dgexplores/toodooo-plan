@@ -56,6 +56,15 @@ test('PC done splits by finish day', () => {
   assert.match(src, /if \(!iso\) return 'earlier';/, 'missing stamps must group as earlier');
 });
 
+test('PC overview is a boss dashboard: flip, stats, grid', () => {
+  const src = read('src/renderer/src/components/AgentPcOverlay.tsx');
+  assert.match(src, /openPc\(agents\[\(idx \+ dir \+ agents\.length\) % agents\.length\]\.id\)/,
+    'team flip-through missing');
+  assert.match(src, /gridTemplateColumns: '1fr 1fr'/, 'two-column layout missing');
+  assert.match(src, /agentPc\.context/, 'context meter missing');
+  assert.match(src, /agentPc\.now/, 'now section missing');
+});
+
 test('avatar and monitor taps use explicit hit geometry', () => {
   // Tap-dead-room incident: texture-backed hit-testing silently dropped taps
   // on avatars/monitors, so clicks visibly on an agent did nothing. Both

@@ -1461,6 +1461,11 @@
     "quiet": "目前安静。",
     "today": "今天",
     "yesterday": "昨天",
-    "earlier": "更早"
+    "earlier": "更早",
+    "now": "当前",
+    "context": "上下文",
+    "noContext": "暂无读数。",
+    "prev": "上一位员工",
+    "next": "下一位员工"
   }
 }
