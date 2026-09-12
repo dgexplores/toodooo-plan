@@ -32,6 +32,15 @@ test('power controls hide in simple mode, nothing else', () => {
     'provider picker must stay visible in simple mode');
 });
 
+test('huddle tab registered on existing bridges only', () => {
+  const src = read('src/renderer/src/components/CommandCenterPanel.tsx');
+  assert.match(src, /\{ key: 'huddle', labelKey: 'commandCenter\.tabs\.huddle'/, 'tab not registered');
+  assert.match(src, /\{tab === 'huddle' && <HuddleTab \/>\}/, 'tab body missing');
+  const tab = read('src/renderer/src/components/HuddleTab.tsx');
+  assert.match(tab, /window\.cth\.hiveLog\(200\)/, 'huddle must read hiveLog, not new IPC');
+  assert.match(tab, /buildHuddles\(log, agents\.map/, 'huddle must aggregate via shared helper');
+});
+
 test('submit path is shared between modes', () => {
   const src = read('src/renderer/src/components/AddAgentModal.tsx');
   const submits = src.match(/window\.cth\.spawnPty\(/g) || [];
@@ -40,7 +49,7 @@ test('submit path is shared between modes', () => {
 
 test('simple tab strip shows six daily tabs behind More', () => {
   const src = read('src/renderer/src/components/CommandCenterPanel.tsx');
-  assert.match(src, /const CORE_TABS: CCTab\[\] = \['terminal', 'floor', 'tasks', 'human', 'workers', 'spend'\]/,
+  assert.match(src, /const CORE_TABS: CCTab\[\] = \['terminal', 'floor', 'tasks', 'human', 'huddle', 'workers', 'spend'\]/,
     'core tab set changed');
   assert.match(src, /\.filter\(\(t\) => !simpleTabs \|\| showAllTabs \|\| CORE_TABS\.includes\(t\.key\)\)/,
     'simple gate missing');

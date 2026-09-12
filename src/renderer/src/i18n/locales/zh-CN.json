@@ -437,7 +437,8 @@
       "activity": "动态",
       "skills": "技能",
       "workers": "工人",
-      "spend": "spend"
+      "spend": "spend",
+      "huddle": "抱团"
     },
     "terminalFullscreen": "终端已全屏打开。按 Esc 返回。",
     "noTerminal": "{{name}} 没有实时终端。",
@@ -1469,5 +1470,10 @@
     "noContext": "暂无读数。",
     "prev": "上一位员工",
     "next": "下一位员工"
+  },
+  "huddle": {
+    "empty": "暂无交流——智能体互发消息后成对出现。",
+    "msgs": "{{count}} 条消息",
+    "noSubject": "（无主题）"
   }
 }

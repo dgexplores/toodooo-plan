@@ -437,7 +437,8 @@
       "activity": "activity",
       "skills": "skills",
       "workers": "workers",
-      "spend": "spend"
+      "spend": "spend",
+      "huddle": "huddle"
     },
     "terminalFullscreen": "Terminal is open in fullscreen. Press Esc to bring it back.",
     "noTerminal": "{{name}} has no live terminal.",
@@ -1469,5 +1470,10 @@
     "noContext": "No reading yet.",
     "prev": "Previous employee",
     "next": "Next employee"
+  },
+  "huddle": {
+    "empty": "No exchanges yet — pairs appear once agents message each other.",
+    "msgs": "{{count}} msgs",
+    "noSubject": "(no subject)"
   }
 }

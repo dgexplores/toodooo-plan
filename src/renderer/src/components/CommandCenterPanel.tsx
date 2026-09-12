@@ -8,6 +8,7 @@ import { PtyTerminalView } from './PtyTerminalView';
 import { MessageQueueComposer } from './MessageQueueComposer';
 import { TasksKanban } from './TasksKanban';
 import { AskMeTab } from './AskMeTab';
+import { HuddleTab } from './HuddleTab';
 import { TriggersTab } from './triggers/TriggersTab';
 import { TriggerHistoryTab } from './triggers/TriggerHistoryTab';
 import { WorkersTab } from './WorkersTab';
@@ -47,7 +48,7 @@ import { useRtl } from '@/i18n/useDirection';
 // Both the AskMe (#human) tab and the Triggers tab live here. Triggers replaced
 // the old Schedules tab: schedules are now one of four trigger types, and the
 // whole surface lives in ./triggers (see src/shared/triggers.ts for the contract).
-type CCTab = 'terminal' | 'floor' | 'tasks' | 'human' | 'triggers' | 'trigger-history'
+type CCTab = 'terminal' | 'floor' | 'tasks' | 'human' | 'huddle' | 'triggers' | 'trigger-history'
   | 'memory' | 'graph' | 'activity' | 'skills' | 'workers' | 'spend';
 
 /** Fallback denominator for the per-agent token meter when no floor token budget
@@ -71,6 +72,7 @@ const TABS: { key: CCTab; labelKey: string; icon: Parameters<typeof Icon>[0]['na
   { key: 'floor', labelKey: 'commandCenter.tabs.floor', icon: 'mcp' },
   { key: 'tasks', labelKey: 'commandCenter.tabs.tasks', icon: 'check' },
   { key: 'human', labelKey: 'commandCenter.tabs.human', icon: 'bell' },
+  { key: 'huddle', labelKey: 'commandCenter.tabs.huddle', icon: 'web' },
   { key: 'triggers', labelKey: 'commandCenter.tabs.triggers', icon: 'clock' },
   { key: 'trigger-history', labelKey: 'commandCenter.tabs.history', icon: 'ledger' },
   { key: 'memory', labelKey: 'commandCenter.tabs.memory', icon: 'sparkle' },
@@ -84,7 +86,7 @@ const TABS: { key: CCTab; labelKey: string; icon: Parameters<typeof Icon>[0]['na
 /** Daily tabs for a non-technical audience. Power tabs (triggers, history,
  *  memory, graph, activity, skills) hide behind More; nothing unmounts
  *  permanently and external requests auto-expand. */
-const CORE_TABS: CCTab[] = ['terminal', 'floor', 'tasks', 'human', 'workers', 'spend'];
+const CORE_TABS: CCTab[] = ['terminal', 'floor', 'tasks', 'human', 'huddle', 'workers', 'spend'];
 
 /** @param fullscreen this instance IS the fullscreen overlay, so it owns the pty
  *  and renders the real terminal. The docked instance renders the "open in
@@ -359,6 +361,7 @@ export function CommandCenterPanel({ agent, fullscreen = false }: { agent: Agent
         {tab === 'floor' && <FloorTab seed={dispatchSeed} />}
         {tab === 'tasks' && <TasksKanban />}
         {tab === 'human' && <AskMeTab />}
+        {tab === 'huddle' && <HuddleTab />}
         {tab === 'triggers' && <TriggersTab />}
         {tab === 'trigger-history' && <TriggerHistoryTab />}
         {tab === 'memory' && (
