@@ -91,7 +91,9 @@ const ERRAND_THOUGHTS: Record<ErrandKind, readonly string[]> = {
   fridge:    ['office.errand.fridge.0', 'office.errand.fridge.1', 'office.errand.fridge.2'],
   shelf:     ['office.errand.shelf.0', 'office.errand.shelf.1', 'office.errand.shelf.2'],
   bin:       ['office.errand.bin.0', 'office.errand.bin.1', 'office.errand.bin.2'],
-  smoke:     ['office.errand.smoke.0', 'office.errand.smoke.1', 'office.errand.smoke.2', 'office.errand.smoke.3']
+  smoke:     ['office.errand.smoke.0', 'office.errand.smoke.1', 'office.errand.smoke.2', 'office.errand.smoke.3'],
+  pool:      ['office.errand.pool.0', 'office.errand.pool.1', 'office.errand.pool.2'],
+  tabletennis: ['office.errand.tabletennis.0', 'office.errand.tabletennis.1', 'office.errand.tabletennis.2']
 };
 
 /** What workers blurt out when the boss walks by — performative excellence.
@@ -905,6 +907,20 @@ export function OfficeFloor() {
             const y = 2 - Math.sin(p * Math.PI) * 9;
             g.rect(Math.round(x), Math.round(y), 2, 2).fill({ color: 0xf5f1e6, alpha: 0.95 });
           }
+        } else if (kind === 'pool') {
+          // chalk puff at the cue tip, then a ball rolling the table length
+          const ph = (t * 0.8) % 1;
+          g.rect(3, 6 + Math.round(Math.sin(t * 3) * 1), 2, 2).fill({ color: 0xd8f1f7, alpha: 0.7 * (1 - ph) });
+          const bx = 4 + ph * 22;
+          g.rect(Math.round(bx), 8, 2, 2).fill({ color: 0xf5f1e6, alpha: 0.95 });
+        } else if (kind === 'tabletennis') {
+          // rally ball bouncing across the net, paddles implied at the edges
+          const ph = (t * 1.4) % 1;
+          const x = 2 + ph * 28;
+          const y = 6 - Math.abs(Math.sin(ph * Math.PI * 2)) * 5;
+          g.rect(Math.round(x), Math.round(y), 2, 2).fill({ color: 0xffffff, alpha: 0.95 });
+          g.rect(1, 5, 1, 5).fill({ color: 0xc06a4a, alpha: 0.9 });
+          g.rect(30, 5, 1, 5).fill({ color: 0xc06a4a, alpha: 0.9 });
         }
         // 'water' draws nothing here — droplets ride on the character itself
       };

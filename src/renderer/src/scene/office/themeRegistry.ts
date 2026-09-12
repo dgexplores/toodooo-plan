@@ -25,14 +25,18 @@ import {
 import officeTilesetUrl from '@/assets/tilesets/office-tileset.png?url';
 import a5FloorsWallsUrl from '@/assets/tilesets/a5-office-floors-walls.png?url';
 import interiorsUrl from '@/assets/tilesets/interiors.png?url';
+import socialPropsUrl from '@/assets/tilesets/social-props.png?url';
 // .tmj is Tiled JSON; imported as raw text and parsed by the loader.
 import officeMapRaw from '@/assets/maps/office.tmj?raw';
 import brooklyn99MapRaw from '@/assets/maps/brooklyn99.tmj?raw';
+import socialMapRaw from '@/assets/maps/social.tmj?raw';
 
-/** Theme identifiers. Only `office` exists in Phase 0; the five TV-show themes
- *  (friends, brooklyn99, siliconvalley, got, hogwarts) land in later phases. */
+/** Theme identifiers. `office` is home; `social` is the same office with the
+ *  boardroom converted to a chill room (own props atlas, pool + ping-pong
+ *  errands). TV-show themes land per-phase as their content does. */
 export type ThemeId =
   | 'office'
+  | 'social'
   | 'friends'
   | 'brooklyn99'
   | 'siliconvalley'
@@ -43,9 +47,11 @@ export interface Tile { x: number; y: number; }
 export type Facing = 'up' | 'down' | 'left' | 'right';
 
 /** Kinds of small idle errands around the office (incl. plant watering).
- *  'smoke' is the boss special: cigar at the open window, god only. */
+ *  'smoke' is the boss special: cigar at the open window, god only.
+ *  'pool' + 'tabletennis' belong to the social theme's chill room. */
 export type ErrandKind =
-  | 'water' | 'window' | 'dispenser' | 'fridge' | 'shelf' | 'bin' | 'smoke';
+  | 'water' | 'window' | 'dispenser' | 'fridge' | 'shelf' | 'bin' | 'smoke'
+  | 'pool' | 'tabletennis';
 
 /** One idle-errand anchor: a stand tile + facing, an `fx` tile for the ambient
  *  animation, a duration, and an optional god-only restriction. */
@@ -216,6 +222,37 @@ export const OFFICE_THEME: ThemeConfig = {
   },
 };
 
+/** Social floor — the same office with the boardroom converted to a chill
+ *  room (pool, ping-pong, sofa, lamp, rug — all own art in social-props).
+ *  Seats, café, coffee, anchors, monitors, palette and cast carry over
+ *  untouched, so every flow behaves identically; only errand spots gain the
+ *  pool + table-tennis viewing stands. */
+export const SOCIAL_THEME: ThemeConfig = {
+  id: 'social',
+  mapRaw: socialMapRaw,
+  tilesets: [
+    { url: officeTilesetUrl, embedded: true },
+    { url: a5FloorsWallsUrl, firstgid: 513, image: 'a5', imagewidth: 256, imageheight: 512, tilewidth: 16, tileheight: 16, columns: 16, tilecount: 512 },
+    { url: interiorsUrl, firstgid: 1025, image: 'interiors', imagewidth: 256, imageheight: 1424, tilewidth: 16, tileheight: 16, columns: 16, tilecount: 1424 },
+    // Own props atlas (tools/make-social-atlas.cjs): 8x4 16px tiles.
+    { url: socialPropsUrl, firstgid: 2449, image: 'social', imagewidth: 128, imageheight: 64, tilewidth: 16, tileheight: 16, columns: 8, tilecount: 32 },
+  ],
+  primarySeatNames: OFFICE_THEME.primarySeatNames,
+  cafeSeatNames: OFFICE_THEME.cafeSeatNames,
+  cafeStands: OFFICE_THEME.cafeStands,
+  coffee: OFFICE_THEME.coffee,
+  anchors: OFFICE_THEME.anchors,
+  errandSpots: [
+    ...OFFICE_THEME.errandSpots,
+    // Chill-room viewing stands (social.tmj paint the tables here).
+    { kind: 'pool', stand: { x: 9, y: 5 }, facing: 'right', fx: { x: 11, y: 4 }, duration: 5 },
+    { kind: 'tabletennis', stand: { x: 14, y: 6 }, facing: 'up', fx: { x: 14, y: 4 }, duration: 5 },
+  ],
+  monitor: OFFICE_THEME.monitor,
+  palette: OFFICE_THEME.palette,
+  cast: OFFICE_THEME.cast,
+};
+
 /** Brooklyn Nine-Nine — the 99th precinct (TV-show offices Phase 2, structure).
  *  The map (brooklyn99.tmj) is a precinct bullpen: Captain Holt's glass office
  *  in the back corner (`desk-ceo`), an 8-desk detective bullpen (`pc-1..8`), a
@@ -289,6 +326,7 @@ export const BROOKLYN99_THEME: ThemeConfig = {
  *  here as their content lands (Phase 2). */
 export const THEMES: Partial<Record<ThemeId, ThemeConfig>> = {
   office: OFFICE_THEME,
+  social: SOCIAL_THEME,
   brooklyn99: BROOKLYN99_THEME,
 };
 
