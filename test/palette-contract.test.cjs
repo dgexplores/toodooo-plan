@@ -31,6 +31,13 @@ test('only brand tokens move, in both themes', () => {
   assert.doesNotMatch(css, /data-cth-palette[^}]*--cth-status/, 'status hues move with palette');
 });
 
+test('colorway rules are top-level, never nested', () => {
+  // Nesting them inside the base :root silently broke cascade resolution
+  // and the switch did nothing. The block must follow a closed rule.
+  const css = read('src/renderer/src/design/tokens.css');
+  assert.match(css, /^}\n\n\/\* ── Brand colorways/m, 'colorway block not top-level');
+});
+
 test('settings exposes the switch', () => {
   const src = read('src/renderer/src/components/SettingsModal.tsx');
   assert.match(src, /PALETTES\.map\(\(p\) =>/, 'swatch row missing');

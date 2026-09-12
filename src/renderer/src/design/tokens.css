@@ -29,24 +29,6 @@
   /* Brand — toodooo signature gold (matches the mark). Used sparingly:
      titlebar rule, boss accents, primary CTA highlights. */
   --cth-brand: #F4D35E;       --cth-brand-light: #FBEDBE;
-
-/* ── Brand colorways (design/palette.ts stamps data-cth-palette) ──────────
-   Only --cth-brand / --cth-brand-light move: gold is the default (no
-   overrides), teal and ember remap the signature. Status hues keep their
-   meaning in every colorway. Brand grounds carry ink text (selection,
-   highlights), so each stays light enough to clear 4.5:1 against ink-900. */
-:root[data-cth-palette='teal'] {
-  --cth-brand: #2FA08C;       --cth-brand-light: #D7EFE9;
-}
-:root[data-cth-theme='dark'][data-cth-palette='teal'] {
-  --cth-brand: #5CC4AC;       --cth-brand-light: #22352F;
-}
-:root[data-cth-palette='ember'] {
-  --cth-brand: #D2674A;       --cth-brand-light: #F6DCD2;
-}
-:root[data-cth-theme='dark'][data-cth-palette='ember'] {
-  --cth-brand: #E08A6D;       --cth-brand-light: #38271F;
-}
   /* Status — same recalibration; hue meanings unchanged */
   --cth-status-idle:     #A199AB;
   --cth-status-thinking: #4F9FAF;
@@ -115,6 +97,26 @@
   --cth-panel-border-inset:    inset 0 0 0 1px var(--cth-ink-100);
   --cth-panel-border-terminal: inset 0 0 0 1px var(--cth-ink-300);
   --cth-panel-border-dialog:   inset 0 0 0 1px var(--cth-ink-500);
+}
+
+/* ── Brand colorways (design/palette.ts stamps data-cth-palette) ──────────
+   TOP-LEVEL rules (never nested inside another :root — nesting broke
+   cascade resolution and the switch silently did nothing). Only --cth-brand
+   / --cth-brand-light move: gold is the default (no overrides), teal and
+   ember remap the signature. Status hues keep their meaning in every
+   colorway. Brand grounds carry ink text (selection, highlights), so each
+   stays light enough to clear 4.5:1 against ink-900. */
+:root[data-cth-palette='teal'] {
+  --cth-brand: #2FA08C;       --cth-brand-light: #D7EFE9;
+}
+:root[data-cth-theme='dark'][data-cth-palette='teal'] {
+  --cth-brand: #5CC4AC;       --cth-brand-light: #22352F;
+}
+:root[data-cth-palette='ember'] {
+  --cth-brand: #D2674A;       --cth-brand-light: #F6DCD2;
+}
+:root[data-cth-theme='dark'][data-cth-palette='ember'] {
+  --cth-brand: #E08A6D;       --cth-brand-light: #38271F;
 }
 
 /* ── Dark theme ──────────────────────────────────────────────────────────────
