@@ -2967,8 +2967,8 @@ export class HiveManager {
   }
 
   /** Per-client IST-day spend + total + unattributed. Powers owner digests. */
-  spendByClient(now = Date.now()): { byClient: Record<string, number>; unattributed: number; total: number } {
-    const out = { byClient: {} as Record<string, number>, unattributed: 0, total: 0 };
+  spendByClient(now = Date.now()): { byClient: Record<string, number>; unattributed: number; total: number; estimatedTotal: number } {
+    const out = { byClient: {} as Record<string, number>, unattributed: 0, total: 0, estimatedTotal: 0 };
     const root = this.root();
     if (!root) return out;
     const start = istDayStart(now);
@@ -2977,10 +2977,11 @@ export class HiveManager {
       for (const line of text.split('\n')) {
         if (!line.trim()) continue;
         try {
-          const r = JSON.parse(line) as { ts?: unknown; usd?: unknown; client_key?: unknown };
+          const r = JSON.parse(line) as { ts?: unknown; usd?: unknown; client_key?: unknown; estimated?: unknown };
           if (typeof r.ts !== 'number' || r.ts < start) continue;
           if (typeof r.usd !== 'number' || r.usd <= 0) continue;
           out.total += r.usd;
+          if (r.estimated === true) out.estimatedTotal += r.usd;
           if (typeof r.client_key === 'string' && r.client_key) {
             out.byClient[r.client_key] = (out.byClient[r.client_key] ?? 0) + r.usd;
           } else {

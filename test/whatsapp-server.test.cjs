@@ -90,3 +90,21 @@ test('missing secrets refuse to start', async (t) => {
   assert.equal(r.ok, false);
   assert.match(r.error, /not configured/);
 });
+
+test('strangers land in held, media leaves an explicit note', async (t) => {
+  const held = [];
+  const media = [];
+  const { port } = await floor(t, { onHeld: (m) => held.push(m), onMedia: (m) => media.push(m) });
+  const r1 = await post(port, inbound('910000000000', 'let me in', 'h1'));
+  assert.equal(r1.status, 200);
+  assert.equal(held.length, 1, 'stranger text held, never dispatched');
+  assert.equal(held[0].from, '910000000000');
+  const r2 = await post(port, inbound('910000000000', 'let me in', 'h1'));
+  assert.equal(r2.status, 200);
+  assert.equal(held.length, 1, 'held retry deduped');
+  const img = { object: 'x', entry: [{ changes: [{ value: { messages: [{ from: '919999999999', id: 'w1', type: 'image', image: { id: 'img' } }] } }] }] };
+  const r3 = await post(port, img);
+  assert.equal(r3.status, 200);
+  assert.equal(media.length, 1, 'allowlisted media noted, not dropped');
+  assert.equal(media[0].kind, 'image');
+});

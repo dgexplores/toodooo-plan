@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { LANGUAGES, setLanguage } from '@/i18n';
 import { useStore, selectedAgent } from '@/store/store';
 import { startMockLoop, stopMockLoop } from '@/store/mockEvents';
 import type { HarnessConfig } from '@/store/config';
@@ -16,6 +18,7 @@ import { AddAgentModal } from '@/components/AddAgentModal';
 import { MichaelBooting } from '@/components/MichaelBooting';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
 import { HivePicker } from '@/components/HivePicker';
+import { CommandPalette } from '@/components/CommandPalette';
 import { QuitWarningModal, type ClosingTimeState } from '@/components/QuitWarningModal';
 import { CompletionToast } from '@/realtime/CompletionToast';
 import { UpdateToast } from '@/components/UpdateToast';
@@ -38,6 +41,7 @@ import brandLogo from '@brand/logo-toodooo.svg?url';
 declare const __APP_VERSION__: string;
 
 export function App() {
+  const { i18n } = useTranslation();
   // Point every {{godName}} string at the orchestrator's real, renameable name.
   useGodNameSync();
   // Mirror the document only for a user who has picked an RTL app language.
@@ -78,8 +82,52 @@ export function App() {
    *  to undefined (→ General) whenever the modal is opened the normal way. */
   const [settingsSection, setSettingsSection] = useState<SettingsSection | undefined>(undefined);
   const [quitWarn, setQuitWarn] = useState<{ ptyCount: number } | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  // Connectivity dot (R-14): the core is local-first, so offline is a state,
+  // not an error. Click opens Settings → General (data-flow page).
+  const [online, setOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
+  useEffect(() => {
+    const goOn = () => setOnline(true);
+    const goOff = () => setOnline(false);
+    window.addEventListener('online', goOn);
+    window.addEventListener('offline', goOff);
+    return () => {
+      window.removeEventListener('online', goOn);
+      window.removeEventListener('offline', goOff);
+    };
+  }, []);
+  // Global palette: Cmd/Ctrl+K, except inside text fields where the keystroke
+  // belongs to the field (composer, dispatch box, editors).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        const el = document.activeElement as HTMLElement | null;
+        const tag = el?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el?.isContentEditable) return;
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   const [closing, setClosing] = useState<ClosingTimeState | null>(null);
   const [vpWidth, setVpWidth] = useState<number>(window.innerWidth);
+  // List mode skips mounting the Pixi floor (no WebGL context, no tile/character
+  // textures) — the roster strip + detail panel stay fully live. Defaults to list
+  // on ≤4GB devices (navigator.deviceMemory), floor otherwise. Persisted.
+  const [officeView, setOfficeView] = useState<'floor' | 'list'>(() => {
+    try {
+      const saved = window.localStorage.getItem('cth.officeView');
+      if (saved === 'list' || saved === 'floor') return saved;
+      const mem = (navigator as unknown as { deviceMemory?: unknown }).deviceMemory;
+      if (typeof mem === 'number' && mem <= 4) return 'list';
+    } catch { /* localStorage unavailable — floor view */ }
+    return 'floor';
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem('cth.officeView', officeView); } catch { /* noop */ }
+  }, [officeView]);
 
   // Deep link into Settings from anywhere in the tree. Settings' open state is
   // local to App, so a nested control (e.g. "set it now" beside a disabled Talk
@@ -371,6 +419,86 @@ export function App() {
         >
           <GearGlyph />
         </button>
+        {/* Floor / list view. List mode never mounts the Pixi scene (no WebGL
+            context, no textures) — for 8GB machines and fullscreen-terminal
+            users who pay the render cost without looking at it. */}
+        <button
+          className="cth-titlebar-nodrag cth-tip"
+          onClick={() => setOfficeView((v) => (v === 'floor' ? 'list' : 'floor'))}
+          data-tip={officeView === 'floor' ? 'List view (lighter, no 3D floor)' : 'Floor view (pixel office)'}
+          aria-label="Toggle floor view"
+          style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            height: 28, padding: '0 10px',
+            background: 'var(--cth-paper-100)',
+            boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
+            border: 'none', borderRadius: 2, cursor: 'pointer',
+            color: 'var(--cth-ink-900)',
+            fontFamily: 'var(--cth-font-ui)', fontSize: 12
+          }}
+        >
+          {officeView === 'floor' ? 'list' : 'floor'}
+        </button>
+        {/* Connectivity (R-14: local-first core). Offline is a state, not an
+            error — hive, memory, tasks and terminals keep working. Click opens
+            Settings → General, home of the data-flow page (R-17). */}
+        <button
+          className="cth-titlebar-nodrag cth-tip"
+          onClick={() => window.dispatchEvent(new CustomEvent('cth:open-settings', { detail: { section: 'General' } }))}
+          data-tip={online ? 'Online' : 'Offline — local mode: hive, memory, tasks, terminals still work'}
+          aria-label="Connectivity status"
+          style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: 28, height: 28, padding: 0,
+            background: 'var(--cth-paper-100)',
+            boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
+            border: 'none', borderRadius: 2, cursor: 'pointer'
+          }}
+        >
+          <span style={{
+            width: 10, height: 10, borderRadius: '50%',
+            background: online ? 'var(--cth-mint)' : 'var(--cth-lemon)',
+            boxShadow: 'inset 0 0 0 1px var(--cth-ink-700)'
+          }} />
+        </button>
+        {/* Language — top-level, not buried in Settings (R-01: explicit
+            choice, never auto-detected). Same setLanguage as Settings. */}
+        <select
+          className="cth-titlebar-nodrag"
+          value={i18n.language}
+          onChange={(e) => setLanguage(e.target.value)}
+          aria-label="Language"
+          style={{
+            height: 28, padding: '0 6px',
+            background: 'var(--cth-paper-100)',
+            boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
+            border: 'none', borderRadius: 2, cursor: 'pointer',
+            color: 'var(--cth-ink-900)',
+            fontFamily: 'var(--cth-font-ui)', fontSize: 12, maxWidth: 110
+          }}
+        >
+          {LANGUAGES.map((l) => (
+            <option key={l.code} value={l.code}>{l.label}</option>
+          ))}
+        </select>
+        {/* Command palette (Cmd/Ctrl+K): every major action, keyboard-first. */}
+        <button
+          className="cth-titlebar-nodrag cth-tip"
+          onClick={() => setPaletteOpen(true)}
+          data-tip="Commands (⌘/Ctrl+K)"
+          aria-label="Open command palette"
+          style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            height: 28, padding: '0 10px',
+            background: 'var(--cth-paper-100)',
+            boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
+            border: 'none', borderRadius: 2, cursor: 'pointer',
+            color: 'var(--cth-ink-900)',
+            fontFamily: 'var(--cth-font-ui)', fontSize: 12
+          }}
+        >
+          ⌘K
+        </button>
         {/* Fullscreen. The title bar is chrome, not canvas, so these two use
             clean stroke icons rather than the 16x16 pixel set the rest of the UI
             is drawn in — at 16-18px a pixel-grid glyph reads as a rendering
@@ -408,7 +536,36 @@ export function App() {
         gap: 0
       }}>
         <div style={{ flex: 1, minHeight: 0, minWidth: 0, position: 'relative' }}>
-          <OfficeFloor />
+          {officeView === 'floor' ? (
+            <OfficeFloor />
+          ) : (
+            <div style={{
+              position: 'absolute', inset: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'var(--cth-cream-100)'
+            }}>
+              <div style={{ textAlign: 'center', maxWidth: 320 }}>
+                <div style={{
+                  fontFamily: 'var(--cth-font-ui)', fontSize: 13,
+                  color: 'var(--cth-ink-700)', lineHeight: '20px'
+                }}>
+                  List mode — pixel floor off (lighter on RAM/battery).
+                  Roster below stays live.
+                </div>
+                <button
+                  onClick={() => setOfficeView('floor')}
+                  style={{
+                    marginTop: 10, padding: '4px 12px', cursor: 'pointer',
+                    background: 'var(--cth-cream-200)', color: 'var(--cth-ink-900)',
+                    border: 'none', boxShadow: 'inset 0 0 0 1px var(--cth-ink-100)',
+                    fontFamily: 'var(--cth-font-ui)', fontSize: 13
+                  }}
+                >
+                  show floor
+                </button>
+              </div>
+            </div>
+          )}
           <MemoryPanel />
           {agentCount === 0 && godStatus === 'booting' && <MichaelBooting />}
           {agentCount === 0 && godStatus !== 'booting' && (
@@ -522,6 +679,12 @@ export function App() {
       {ideOpen && <IdePanel />}
       <TaskDetailOverlay />
       <AgentPcOverlay />
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        onToggleOfficeView={() => setOfficeView((v) => (v === 'floor' ? 'list' : 'floor'))}
+        onSwitchHive={() => setHiveOpened(false)}
+      />
     </div>
   );
 }

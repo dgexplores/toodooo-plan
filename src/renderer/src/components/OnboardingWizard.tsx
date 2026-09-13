@@ -6,6 +6,7 @@ import { Icon, type IconName } from './Icon';
 import { SpritePortrait } from './SpritePortrait';
 import { ProviderLogo } from './ProviderLogo';
 import { modelsForProvider, onboardingEngineChoices, type AgentProvider, type HarnessConfig } from '@/store/config';
+import { LANGUAGES, setLanguage } from '@/i18n';
 import { providerPreset } from '@shared/agentProvider';
 import {
   classifyEngineAvailability, engineAvailabilityBadge, engineAvailabilityMessage, engineBlocksOnboarding
@@ -88,7 +89,7 @@ const PROVIDER_BLURB_KEYS: Partial<Record<AgentProvider, string>> = {
 };
 
 export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // Onboarding runs before god exists in the store, so read the persisted name.
   const godName = useResolvedGodName();
   const [step, setStep] = useState<Step>('persona');
@@ -305,6 +306,34 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                     selected={audience === 'non-technical'}
                     onClick={() => { setAudience('non-technical'); setError(undefined); }}
                   />
+                </div>
+
+                {/* Explicit language choice on the first screen (R-02: never
+                    auto-detect). Same setLanguage as Settings → General. */}
+                <div>
+                  <div style={{ fontFamily: 'var(--cth-font-display)', fontSize: 10, color: 'var(--cth-ink-700)', marginBottom: 8 }}>
+                    {t('onboarding.persona.language')}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {LANGUAGES.map((l) => {
+                      const active = i18n.language === l.code;
+                      return (
+                        <button
+                          key={l.code}
+                          onClick={() => setLanguage(l.code)}
+                          aria-pressed={active}
+                          style={{
+                            padding: '6px 12px', cursor: 'pointer',
+                            border: 'none',
+                            background: active ? 'var(--cth-mint-light)' : 'var(--cth-paper-100)',
+                            boxShadow: `inset 0 0 0 ${active ? 2 : 1}px ${active ? 'var(--cth-mint)' : 'var(--cth-ink-300)'}`,
+                            fontFamily: 'var(--cth-font-ui)', fontSize: 13,
+                            color: 'var(--cth-ink-900)'
+                          }}
+                        >{l.label}</button>
+                      );
+                    })}
+                  </div>
                 </div>
               </>
             )}

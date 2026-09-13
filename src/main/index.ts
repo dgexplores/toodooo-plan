@@ -4204,6 +4204,33 @@ async function startWhatsAppServer(): Promise<{ ok: boolean; port?: number; erro
         );
         hive.appendLog({ kind: 'whatsapp-in', from: m.from, id: m.messageId });
       },
+      // Strangers never auto-execute: their text lands in the god inbox as a
+      // held note. Allowing = adding the number in Settings → WhatsApp.
+      onHeld: (m) => {
+        hive.send(
+          {
+            to: 'god',
+            act: 'inform',
+            subject: `Held WhatsApp from ${m.from} (not allowlisted)`,
+            body: `${m.text}\n\n— held: add ${m.from} to the WhatsApp allowlist to let them reach agents.`
+          },
+          'whatsapp-held'
+        );
+        hive.appendLog({ kind: 'whatsapp-held', from: m.from, id: m.messageId });
+      },
+      // Media can't execute anything: leave the explicit "not yet" note.
+      onMedia: (m) => {
+        hive.send(
+          {
+            to: 'god',
+            act: 'inform',
+            subject: `WhatsApp ${m.kind} from ${m.from} (not supported yet)`,
+            body: `They sent a ${m.kind} message — only text reaches agents today. Ask them to send text.`
+          },
+          `whatsapp:${m.from}`
+        );
+        hive.appendLog({ kind: 'whatsapp-media', from: m.from, id: m.messageId, mediaKind: m.kind });
+      },
       onSkip: (reasons) => {
         hive.appendLog({ kind: 'whatsapp-skip', reasons });
       }

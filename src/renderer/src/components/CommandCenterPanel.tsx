@@ -1147,6 +1147,12 @@ function MemoryTab({ godId, who: controlledWho, onWho }: { godId: string; who?: 
   const [textResults, setTextResults] = useState<Array<{ source: string; excerpt: string }>>([]);
   const [textSearched, setTextSearched] = useState(false);
   const [textBusy, setTextBusy] = useState(false);
+  // Focus the search box on palette request (one-shot, seq-keyed).
+  const textInputRef = useRef<HTMLInputElement | null>(null);
+  const memorySearchFocus = useStore((s) => s.memorySearchFocus);
+  useEffect(() => {
+    if (memorySearchFocus && memorySearchFocus.seq > 0) textInputRef.current?.focus();
+  }, [memorySearchFocus]);
 
   useEffect(() => {
     window.cth.hiveMemory(who).then(setMem).catch(() => setMem(''));
@@ -1176,6 +1182,7 @@ function MemoryTab({ godId, who: controlledWho, onWho }: { godId: string; who?: 
       <Section title={t('commandCenter.textSearch')}>
         <div style={{ display: 'flex', gap: 6 }}>
           <input
+            ref={textInputRef}
             value={textQuery}
             onChange={(e) => setTextQuery(e.target.value)}
             onKeyDown={(e) => { if (isComposingKey(e)) return; if (e.key === 'Enter') textSearch(); }}
@@ -1311,8 +1318,9 @@ function TokenLimitEditor({ value, onSet }: { value?: number; onSet: (tokens: nu
 // directory picker; the query is the contract.
 function SpendTab() {
   const { t } = useTranslation();
-  const [data, setData] = useState<{ byClient: Record<string, number>; unattributed: number; total: number } | null>(null);
+  const [data, setData] = useState<{ byClient: Record<string, number>; unattributed: number; total: number; estimatedTotal: number } | null>(null);
   const [rate, setRate] = useState<number | null>(null);
+  const [dailyCap, setDailyCap] = useState<number | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -1321,6 +1329,7 @@ function SpendTab() {
       try {
         const c = await window.cth.getConfig();
         setRate(typeof c.fxUsdInr === 'number' && c.fxUsdInr > 0 ? c.fxUsdInr : null);
+        setDailyCap(typeof c.dailyCapUsd === 'number' && c.dailyCapUsd > 0 ? c.dailyCapUsd : null);
       } catch { /* noop */ }
     };
     refresh();
@@ -1336,6 +1345,11 @@ function SpendTab() {
   };
 
   const rows = data ? Object.entries(data.byClient).sort((a, b) => b[1] - a[1]) : [];
+  // Daily-cap meter: amber at ≥80% (warn, spawns still allowed), red at 100%
+  // (spawn gate refuses NEW spawns; running agents finish untouched).
+  const ratio = data && dailyCap ? data.total / dailyCap : 0;
+  const blocked = dailyCap !== null && ratio >= 1;
+  const near = dailyCap !== null && !blocked && ratio >= 0.8;
   return (
     <Scroll>
       <Section title={t('commandCenter.spendTitle')}>
@@ -1345,6 +1359,34 @@ function SpendTab() {
             <div style={{ fontSize: 14, marginBottom: 6 }}>
               ${data.total.toFixed(2)}{inr(data.total)} {t('commandCenter.spendToday')}
             </div>
+            {dailyCap !== null && (
+              <div style={{ marginBottom: 8 }}>
+                <div style={{
+                  height: 8, background: 'var(--cth-cream-200)',
+                  boxShadow: 'inset 0 0 0 1px var(--cth-ink-100)'
+                }}>
+                  <div style={{
+                    height: '100%', width: `${Math.min(100, ratio * 100)}%`,
+                    background: blocked ? 'var(--cth-coral)' : near ? 'var(--cth-lemon)' : 'var(--cth-mint)'
+                  }} />
+                </div>
+                <div style={{
+                  fontSize: 12, marginTop: 4,
+                  color: blocked ? 'var(--cth-coral)' : near ? 'var(--cth-ink-900)' : 'var(--cth-ink-500)'
+                }}>
+                  {blocked
+                    ? t('commandCenter.spendCapBlocked')
+                    : near
+                    ? t('commandCenter.spendCapWarn')
+                    : t('commandCenter.spendCapNote', { pct: Math.round(ratio * 100), cap: dailyCap.toFixed(2) })}
+                </div>
+              </div>
+            )}
+            {data.estimatedTotal > 0 && (
+              <div style={{ fontSize: 12, color: 'var(--cth-ink-500)', marginBottom: 6 }}>
+                {t('commandCenter.spendEstimated', { usd: data.estimatedTotal.toFixed(2) })}
+              </div>
+            )}
             {rows.map(([client, usd]) => (
               <div key={client} style={{ fontSize: 12, display: 'flex', gap: 8, padding: '2px 0' }}>
                 <span style={{ minWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}>{client}</span>

@@ -156,6 +156,8 @@
     "ide": "IDE",
     "openTerminalAria": "在该智能体的文件夹中打开系统终端",
     "repairFolder": "Repair folder",
+    "deadTitle": "没有实时终端",
+    "deadDesc": "该智能体已归档或其进程已结束。将其恢复；若项目在磁盘上移动过，请重新绑定文件夹。",
     "repairBtn": "Repair",
     "repaired": "Folder updated.",
     "repairFailed": "Repair failed.",
@@ -518,6 +520,10 @@
     "spendTitle": "SPEND — TODAY (IST)",
     "spendToday": "today",
     "spendUnattributed": "unattributed",
+    "spendCapNote": "每日上限 ${{cap}} 的 {{pct}}%",
+    "spendCapWarn": "已达每日上限 80%+ —— 100% 时停止新建",
+    "spendCapBlocked": "已达每日上限 —— 拒绝新建，运行中的智能体不受影响",
+    "spendEstimated": "其中 ${{usd}} 为估算（默认定价模型）",
     "showAllTabs": "更多",
     "showFewerTabs": "收起"
   },
@@ -646,7 +652,8 @@
       "technicalTitle": "我是技术人员",
       "technicalDesc": "我写代码或用终端工作。给我看 CLI 命令、标志和模型 ID。",
       "nonTechnicalTitle": "我是非技术人员",
-      "nonTechnicalDesc": "我从事市场、销售、运营或刚入门。请用通俗语言解释。"
+      "nonTechnicalDesc": "我从事市场、销售、运营或刚入门。请用通俗语言解释。",
+      "language": "语言 —— 你的语言，可随时在设置中更改"
     },
     "welcome": {
       "headline": "你的克隆以及它经营的楼层",
@@ -1373,6 +1380,7 @@
     "clearAllTitle": "清空所有排队消息",
     "clearAll": "全部清空",
     "removeAttachment": "移除附件",
+    "sendHint": "Enter 发送 · Shift+Enter 换行",
     "messagePlaceholder": "给 {{name}} 发消息",
     "busyPlaceholder": "{{name}} 正在忙——排队发消息",
     "files": "文件",

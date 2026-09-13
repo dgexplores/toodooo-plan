@@ -19,6 +19,7 @@ import { Icon } from './Icon';
 import { AgentNameEditor } from './AgentNameEditor';
 import { useStore, type Agent } from '@/store/store';
 import { usePtyParser } from '@/hooks/usePtyParser';
+import { useRestoreTeam } from '@/hooks/useRestoreTeam';
 
 export interface AgentDetailPanelProps {
   agent: Agent;
@@ -79,6 +80,8 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
     return () => ro.disconnect();
   }, []);
   const archiveAgent = useStore(s => s.archiveAgent);
+  const addRestorableAgent = useStore(s => s.addRestorableAgent);
+  const { restoreTeam } = useRestoreTeam();
   const updateAgent = useStore(s => s.updateAgent);
   const renameAgent = useStore(s => s.renameAgent);
   const setFullscreen = useStore(s => s.setFullscreen);
@@ -245,6 +248,37 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
           background: 'var(--cth-coral-light)',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
         }}>{openTerminalError}</div>
+      )}
+
+      {/* Dead agent (no live PTY): restore + folder repair in one banner instead
+          of a buried 11px link — archive is a state, not deletion (B-016). */}
+      {!isReal && (
+        <div role="status" style={{
+          background: 'var(--cth-coral-light)',
+          boxShadow: 'inset 0 0 0 1.5px var(--cth-ink-500), inset 0 0 0 4px var(--cth-coral)',
+          padding: 10, margin: 8,
+          display: 'flex', flexDirection: 'column', gap: 6
+        }}>
+          <div style={{
+            fontFamily: 'var(--cth-font-ui)', fontWeight: 700, fontSize: 13,
+            color: 'var(--cth-ink-900)'
+          }}>{t('agentDetail.deadTitle')}</div>
+          <div style={{ fontSize: 12, lineHeight: '17px', color: 'var(--cth-ink-700)' }}>
+            {t('agentDetail.deadDesc')}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <PixelButton
+              variant="primary"
+              size="sm"
+              onClick={() => { addRestorableAgent(agent); void restoreTeam(); }}
+            >{t('commandCenter.restoreOne')}</PixelButton>
+            <PixelButton
+              variant="secondary"
+              size="sm"
+              onClick={() => { setRepairOpen(true); setRepairPath(agent.cwd); setRepairMsg(undefined); }}
+            >{t('agentDetail.repairFolder')}</PixelButton>
+          </div>
+        </div>
       )}
 
       {/* Folder repair: renaming the project on disk orphans the agent with no

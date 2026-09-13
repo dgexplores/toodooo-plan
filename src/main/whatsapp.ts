@@ -61,13 +61,25 @@ export interface WhatsAppInbound {
   messageId: string;
 }
 
+export interface WhatsAppMedia {
+  /** Sender phone / WA id. */
+  from: string;
+  /** Provider message id (dedupe key for retries). */
+  messageId: string;
+  /** Media type as reported by Meta (image, audio, video, document, sticker…). */
+  kind: string;
+}
+
 /** Extract inbound TEXT messages; delivery receipts, reactions and media are
- *  skipped with explicit reasons (never crash, never silent-drop). */
-export function parseInbound(body: unknown): { messages: WhatsAppInbound[]; skipped: string[] } {
+ *  skipped with explicit reasons (never crash, never silent-drop). Non-text
+ *  with a known sender is ALSO returned as `media` so the caller can leave an
+ *  explicit "not supported yet" note instead of dropping it silently. */
+export function parseInbound(body: unknown): { messages: WhatsAppInbound[]; skipped: string[]; media: WhatsAppMedia[] } {
   const messages: WhatsAppInbound[] = [];
   const skipped: string[] = [];
+  const media: WhatsAppMedia[] = [];
   const entry = (body as Record<string, unknown> | null)?.['entry'];
-  if (!Array.isArray(entry)) return { messages, skipped: ['no-entry'] };
+  if (!Array.isArray(entry)) return { messages, skipped: ['no-entry'], media };
   for (const e of entry) {
     const changes = (e as Record<string, unknown>)?.['changes'];
     if (!Array.isArray(changes)) continue;
@@ -90,14 +102,16 @@ export function parseInbound(body: unknown): { messages: WhatsAppInbound[]; skip
           continue;
         }
         if (typeof text !== 'string' || !text.trim()) {
-          skipped.push(`non-text:${typeof r['type'] === 'string' ? (r['type'] as string) : 'unknown'}`);
+          const kind = typeof r['type'] === 'string' ? (r['type'] as string) : 'unknown';
+          skipped.push(`non-text:${kind}`);
+          if (from && id && kind !== 'unknown') media.push({ from, messageId: id, kind });
           continue;
         }
         messages.push({ from, text: text.slice(0, 4000), messageId: id });
       }
     }
   }
-  return { messages, skipped };
+  return { messages, skipped, media };
 }
 
 /** Allowlist gate (R-07): unknown senders never reach agents. Empty list =
