@@ -527,6 +527,14 @@
     "showAllTabs": "更多",
     "showFewerTabs": "收起"
   },
+  "floorList": {
+    "title": "名单 ({{count}})",
+    "lightNote": "列表模式 —— 像素楼层已关闭",
+    "showFloor": "显示楼层",
+    "empty": "楼层上还没有智能体。",
+    "addAgent": "添加智能体",
+    "boss": "老板"
+  },
   "addAgent": {
     "title": "添加智能体",
     "hireImported": "已导入 hire：",

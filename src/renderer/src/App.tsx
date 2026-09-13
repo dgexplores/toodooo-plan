@@ -18,6 +18,7 @@ import { AddAgentModal } from '@/components/AddAgentModal';
 import { MichaelBooting } from '@/components/MichaelBooting';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
 import { HivePicker } from '@/components/HivePicker';
+import { FloorList } from '@/components/FloorList';
 import { CommandPalette } from '@/components/CommandPalette';
 import { QuitWarningModal, type ClosingTimeState } from '@/components/QuitWarningModal';
 import { CompletionToast } from '@/realtime/CompletionToast';
@@ -539,32 +540,7 @@ export function App() {
           {officeView === 'floor' ? (
             <OfficeFloor />
           ) : (
-            <div style={{
-              position: 'absolute', inset: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'var(--cth-cream-100)'
-            }}>
-              <div style={{ textAlign: 'center', maxWidth: 320 }}>
-                <div style={{
-                  fontFamily: 'var(--cth-font-ui)', fontSize: 13,
-                  color: 'var(--cth-ink-700)', lineHeight: '20px'
-                }}>
-                  List mode — pixel floor off (lighter on RAM/battery).
-                  Roster below stays live.
-                </div>
-                <button
-                  onClick={() => setOfficeView('floor')}
-                  style={{
-                    marginTop: 10, padding: '4px 12px', cursor: 'pointer',
-                    background: 'var(--cth-cream-200)', color: 'var(--cth-ink-900)',
-                    border: 'none', boxShadow: 'inset 0 0 0 1px var(--cth-ink-100)',
-                    fontFamily: 'var(--cth-font-ui)', fontSize: 13
-                  }}
-                >
-                  show floor
-                </button>
-              </div>
-            </div>
+            <FloorList onShowFloor={() => setOfficeView('floor')} />
           )}
           <MemoryPanel />
           {agentCount === 0 && godStatus === 'booting' && <MichaelBooting />}

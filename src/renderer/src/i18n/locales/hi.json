@@ -583,6 +583,14 @@
     "showAllTabs": "और",
     "showFewerTabs": "कम"
   },
+  "floorList": {
+    "title": "रोस्टर ({{count}})",
+    "lightNote": "लिस्ट मोड — पिक्सेल फ्लोर बंद",
+    "showFloor": "फ्लोर दिखाएं",
+    "empty": "फ्लोर पर अभी कोई एजेंट नहीं।",
+    "addAgent": "एजेंट जोड़ें",
+    "boss": "बॉस"
+  },
   "queueComposer": {
     "recording": "● रिकॉर्डिंग — रोककर ट्रांसक्राइब करें",
     "transcribing": "ट्रांसक्राइब हो रहा…",

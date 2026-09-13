@@ -527,6 +527,14 @@
     "showAllTabs": "المزيد",
     "showFewerTabs": "أقل"
   },
+  "floorList": {
+    "title": "القائمة ({{count}})",
+    "lightNote": "وضع القائمة — الأرضية مغلقة",
+    "showFloor": "اعرض الأرضية",
+    "empty": "لا وكلاء على الأرضية بعد.",
+    "addAgent": "أضِف وكيلًا",
+    "boss": "الرئيس"
+  },
   "addAgent": {
     "title": "إضافة وكيل",
     "hireImported": "استُورد التعيين:",
