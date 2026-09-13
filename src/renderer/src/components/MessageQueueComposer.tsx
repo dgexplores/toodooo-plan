@@ -380,7 +380,9 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
             narrow sidebar wraps the buttons onto a second row instead of
             pushing Send off-screen. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, rowGap: 6, flexWrap: 'wrap', minWidth: 0 }}>
-          <span style={{ flex: 1 }} />
+          <span style={{ fontSize: 11, color: 'var(--cth-ink-500)', marginRight: 'auto' }}>
+            {t('queueComposer.sendHint')}
+          </span>
           <PixelButton variant="secondary" size="sm" onClick={pickFiles}>
             <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
               <Icon name="plus" /> {t('queueComposer.files')}

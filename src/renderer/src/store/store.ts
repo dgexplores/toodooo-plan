@@ -263,6 +263,10 @@ interface State {
    *  "assign" from anywhere in the app). seq-keyed like ccTabRequest. */
   dispatchSeedRequest: { text: string; seq: number } | null;
   requestDispatchSeed: (text: string) => void;
+  /** One-shot focus request for the memory tab's text-search box (e.g. from
+   *  the command palette). seq-keyed like ccTabRequest. */
+  memorySearchFocus: { seq: number } | null;
+  requestMemorySearchFocus: () => void;
   /** Unsent ASK ME answer drafts, keyed by task id — so switching tabs (which
    *  unmounts the ask-me view) doesn't eat a half-typed answer. */
   answerDrafts: Record<string, string>;
@@ -920,8 +924,11 @@ export const useStore = create<State>((set, get) => ({
   openTaskDetail: (id) => set({ taskDetailId: id }),
   closeTaskDetail: () => set({ taskDetailId: null }),
   dispatchSeedRequest: null,
-  requestDispatchSeed: (text) =>
-    set((s) => ({ dispatchSeedRequest: { text, seq: (s.dispatchSeedRequest?.seq ?? 0) + 1 } })),
+ requestDispatchSeed: (text) =>
+   set((s) => ({ dispatchSeedRequest: { text, seq: (s.dispatchSeedRequest?.seq ?? 0) + 1 } })),
+ memorySearchFocus: null,
+ requestMemorySearchFocus: () =>
+   set((s) => ({ memorySearchFocus: { seq: (s.memorySearchFocus?.seq ?? 0) + 1 } })),
   answerDrafts: {},
   setAnswerDraft: (taskId, text) =>
     set((s) => ({ answerDrafts: { ...s.answerDrafts, [taskId]: text } })),

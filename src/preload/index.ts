@@ -769,8 +769,8 @@ const api = {
    *  on carry the key; history is never rewritten. */
   hiveSetClientKey: (id: string, key: string): Promise<{ ok: boolean; clientKey?: string; error?: string }> =>
     ipcRenderer.invoke('hive:setClientKey', id, key),
-  /** Per-client IST-day spend + total + unattributed. Powers owner digests. */
-  costByClient: (): Promise<{ byClient: Record<string, number>; unattributed: number; total: number }> =>
+  /** Per-client IST-day spend + total + unattributed + estimated slice. Powers owner digests. */
+  costByClient: (): Promise<{ byClient: Record<string, number>; unattributed: number; total: number; estimatedTotal: number }> =>
     ipcRenderer.invoke('cost:byClient'),
   /** Export one client's agent dirs + ledger slice as tgz. Deletion is separate. */
   clientExport: (key: string, dest: string): Promise<{ ok: boolean; path?: string; agents?: number; error?: string }> =>

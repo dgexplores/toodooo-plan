@@ -81,6 +81,9 @@ const TABS: { key: CCTab; labelKey: string; icon: Parameters<typeof Icon>[0]['na
   { key: 'spend', labelKey: 'commandCenter.tabs.spend', icon: 'ledger' }
 ];
 
+/** Daily tabs stay visible. Rest live behind More. Matches README six daily tabs. */
+const DAILY_TABS: ReadonlySet<CCTab> = new Set(['terminal', 'floor', 'tasks', 'human', 'workers', 'spend']);
+
 /** @param fullscreen this instance IS the fullscreen overlay, so it owns the pty
  *  and renders the real terminal. The docked instance renders the "open in
  *  fullscreen" placeholder instead — two live xterms on one pty fight over its
@@ -100,6 +103,24 @@ export function CommandCenterPanel({ agent, fullscreen = false }: { agent: Agent
     if (!showHistory && tab === 'trigger-history') setTab('terminal');
   }, [showHistory, tab]);
   const visibleTabs = TABS.filter((t) => t.key !== 'trigger-history' || showHistory);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onDown = (e: PointerEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMoreOpen(false); };
+    window.addEventListener('pointerdown', onDown);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [moreOpen]);
+  const dailyTabs = visibleTabs.filter((td) => DAILY_TABS.has(td.key));
+  const moreTabs = visibleTabs.filter((td) => !DAILY_TABS.has(td.key));
+  const moreActive = moreTabs.some((td) => td.key === tab);
 
   // External tab requests (the office task board → 'tasks', the boss-room
   // calendar → 'triggers'). seq-keyed so clicking again re-opens the tab even
@@ -262,10 +283,10 @@ export function CommandCenterPanel({ agent, fullscreen = false }: { agent: Agent
         padding: '6px 8px', background: 'var(--cth-cream-100)',
         borderBottom: '1px solid var(--cth-ink-700)', flexShrink: 0
       }}>
-        {visibleTabs.map((tabDef) => (
+        {dailyTabs.map((tabDef) => (
           <button
             key={tabDef.key}
-            onClick={() => setTab(tabDef.key)}
+            onClick={() => { setTab(tabDef.key); setMoreOpen(false); }}
             style={{
               whiteSpace: 'nowrap',
               // grow to share any spare width (so the strip still spans the panel
@@ -289,6 +310,57 @@ export function CommandCenterPanel({ agent, fullscreen = false }: { agent: Agent
             <Icon name={tabDef.icon} /> {t(tabDef.labelKey)}
           </button>
         ))}
+        {moreTabs.length > 0 && (
+          <div ref={moreRef} style={{ position: 'relative', flex: '1 0 auto', display: 'flex' }}>
+            <button
+              aria-haspopup="menu"
+              aria-expanded={moreOpen}
+              onClick={() => setMoreOpen((v) => !v)}
+              style={{
+                whiteSpace: 'nowrap', flex: '1 0 auto',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                padding: '4px 8px 3px', border: 'none', cursor: 'pointer',
+                background: moreActive ? `var(--cth-${agent.accent})` : 'var(--cth-cream-200)',
+                color: moreActive ? 'var(--cth-on-accent)' : 'var(--cth-ink-900)',
+                boxShadow: moreActive
+                  ? 'inset 0 0 0 1px var(--cth-ink-300)'
+                  : 'inset 0 0 0 1px var(--cth-ink-100)',
+                fontFamily: 'var(--cth-font-ui)', fontSize: 13
+              }}
+            >
+              {t('commandCenter.tabs.more')}{moreOpen ? ' ▴' : ' ▾'}
+            </button>
+            {moreOpen && (
+              <div
+                role="menu"
+                style={{
+                  position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 400,
+                  minWidth: 180, padding: 4, display: 'flex', flexDirection: 'column', gap: 4,
+                  background: 'var(--cth-paper-100)',
+                  border: '2px solid var(--cth-ink-700)',
+                  boxShadow: '4px 4px 0 var(--cth-ink-700)'
+                }}
+              >
+                {moreTabs.map((tabDef) => (
+                  <button
+                    key={tabDef.key}
+                    role="menuitem"
+                    onClick={() => { setTab(tabDef.key); setMoreOpen(false); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '6px 10px', border: 'none', cursor: 'pointer', textAlign: 'left',
+                      background: tab === tabDef.key ? `var(--cth-${agent.accent})` : 'var(--cth-cream-200)',
+                      color: tab === tabDef.key ? 'var(--cth-on-accent)' : 'var(--cth-ink-900)',
+                      fontFamily: 'var(--cth-font-ui)', fontSize: 13
+                    }}
+                  >
+                    <Icon name={tabDef.icon} /> {t(tabDef.labelKey)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Body */}
@@ -1094,6 +1166,12 @@ function MemoryTab({ godId, who: controlledWho, onWho }: { godId: string; who?: 
   const [textResults, setTextResults] = useState<Array<{ source: string; excerpt: string }>>([]);
   const [textSearched, setTextSearched] = useState(false);
   const [textBusy, setTextBusy] = useState(false);
+  // Focus the search box on palette request (one-shot, seq-keyed).
+  const textInputRef = useRef<HTMLInputElement | null>(null);
+  const memorySearchFocus = useStore((s) => s.memorySearchFocus);
+  useEffect(() => {
+    if (memorySearchFocus && memorySearchFocus.seq > 0) textInputRef.current?.focus();
+  }, [memorySearchFocus]);
 
   useEffect(() => {
     window.cth.hiveMemory(who).then(setMem).catch(() => setMem(''));
@@ -1123,6 +1201,7 @@ function MemoryTab({ godId, who: controlledWho, onWho }: { godId: string; who?: 
       <Section title={t('commandCenter.textSearch')}>
         <div style={{ display: 'flex', gap: 6 }}>
           <input
+            ref={textInputRef}
             value={textQuery}
             onChange={(e) => setTextQuery(e.target.value)}
             onKeyDown={(e) => { if (isComposingKey(e)) return; if (e.key === 'Enter') textSearch(); }}
@@ -1258,8 +1337,9 @@ function TokenLimitEditor({ value, onSet }: { value?: number; onSet: (tokens: nu
 // directory picker; the query is the contract.
 function SpendTab() {
   const { t } = useTranslation();
-  const [data, setData] = useState<{ byClient: Record<string, number>; unattributed: number; total: number } | null>(null);
+  const [data, setData] = useState<{ byClient: Record<string, number>; unattributed: number; total: number; estimatedTotal: number } | null>(null);
   const [rate, setRate] = useState<number | null>(null);
+  const [dailyCap, setDailyCap] = useState<number | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -1268,6 +1348,7 @@ function SpendTab() {
       try {
         const c = await window.cth.getConfig();
         setRate(typeof c.fxUsdInr === 'number' && c.fxUsdInr > 0 ? c.fxUsdInr : null);
+        setDailyCap(typeof c.dailyCapUsd === 'number' && c.dailyCapUsd > 0 ? c.dailyCapUsd : null);
       } catch { /* noop */ }
     };
     refresh();
@@ -1283,6 +1364,11 @@ function SpendTab() {
   };
 
   const rows = data ? Object.entries(data.byClient).sort((a, b) => b[1] - a[1]) : [];
+  // Daily-cap meter: amber at ≥80% (warn, spawns still allowed), red at 100%
+  // (spawn gate refuses NEW spawns; running agents finish untouched).
+  const ratio = data && dailyCap ? data.total / dailyCap : 0;
+  const blocked = dailyCap !== null && ratio >= 1;
+  const near = dailyCap !== null && !blocked && ratio >= 0.8;
   return (
     <Scroll>
       <Section title={t('commandCenter.spendTitle')}>
@@ -1292,6 +1378,34 @@ function SpendTab() {
             <div style={{ fontSize: 14, marginBottom: 6 }}>
               ${data.total.toFixed(2)}{inr(data.total)} {t('commandCenter.spendToday')}
             </div>
+            {dailyCap !== null && (
+              <div style={{ marginBottom: 8 }}>
+                <div style={{
+                  height: 8, background: 'var(--cth-cream-200)',
+                  boxShadow: 'inset 0 0 0 1px var(--cth-ink-100)'
+                }}>
+                  <div style={{
+                    height: '100%', width: `${Math.min(100, ratio * 100)}%`,
+                    background: blocked ? 'var(--cth-coral)' : near ? 'var(--cth-lemon)' : 'var(--cth-mint)'
+                  }} />
+                </div>
+                <div style={{
+                  fontSize: 12, marginTop: 4,
+                  color: blocked ? 'var(--cth-coral)' : near ? 'var(--cth-ink-900)' : 'var(--cth-ink-500)'
+                }}>
+                  {blocked
+                    ? t('commandCenter.spendCapBlocked')
+                    : near
+                    ? t('commandCenter.spendCapWarn')
+                    : t('commandCenter.spendCapNote', { pct: Math.round(ratio * 100), cap: dailyCap.toFixed(2) })}
+                </div>
+              </div>
+            )}
+            {data.estimatedTotal > 0 && (
+              <div style={{ fontSize: 12, color: 'var(--cth-ink-500)', marginBottom: 6 }}>
+                {t('commandCenter.spendEstimated', { usd: data.estimatedTotal.toFixed(2) })}
+              </div>
+            )}
             {rows.map(([client, usd]) => (
               <div key={client} style={{ fontSize: 12, display: 'flex', gap: 8, padding: '2px 0' }}>
                 <span style={{ minWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}>{client}</span>

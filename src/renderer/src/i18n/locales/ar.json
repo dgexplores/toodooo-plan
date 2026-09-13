@@ -156,6 +156,8 @@
     "ide": "بيئة التطوير",
     "openTerminalAria": "افتح طرفية نظام في مجلد هذا الوكيل",
     "repairFolder": "Repair folder",
+    "deadTitle": "لا طرفية حيّة",
+    "deadDesc": "هذا الوكيل مؤرشَف أو انتهت عمليته. استعده، أو أعد ربط مجلده إذا انتقل المشروع على القرص.",
     "repairBtn": "Repair",
     "repaired": "Folder updated.",
     "repairFailed": "Repair failed."
@@ -433,7 +435,8 @@
       "activity": "النشاط",
       "skills": "المهارات",
       "workers": "العمّال",
-      "spend": "spend"
+      "spend": "spend",
+      "more": "المزيد"
     },
     "terminalFullscreen": "الطرفية مفتوحة بملء الشاشة. اضغط Esc لإعادتها.",
     "noTerminal": "{{name}} ليس لديه طرفية حيّة.",
@@ -512,7 +515,11 @@
     "restoreOne": "Restore",
     "spendTitle": "SPEND — TODAY (IST)",
     "spendToday": "today",
-    "spendUnattributed": "unattributed"
+    "spendUnattributed": "unattributed",
+    "spendCapNote": "{{pct}}% من السقف اليومي ${{cap}}",
+    "spendCapWarn": "80%+ من السقف اليومي — تتوقف الولادات الجديدة عند 100%",
+    "spendCapBlocked": "بلغ السقف اليومي — الولادات الجديدة مرفوضة، والوكلاء العاملون يُكملون",
+    "spendEstimated": "منها ${{usd}} تقديري (نماذج بالتسعير الافتراضي)"
   },
   "addAgent": {
     "title": "إضافة وكيل",
@@ -637,7 +644,8 @@
       "technicalTitle": "أنا تقني",
       "technicalDesc": "أكتب الشيفرة أو أعمل في الطرفية. اعرض لي أوامر الـCLI والرايات ومعرّفات النماذج.",
       "nonTechnicalTitle": "أنا غير تقني",
-      "nonTechnicalDesc": "أعمل في التسويق أو المبيعات أو العمليات، أو أنا في بداية الطريق. اشرح لي الأمور بلغة واضحة."
+      "nonTechnicalDesc": "أعمل في التسويق أو المبيعات أو العمليات، أو أنا في بداية الطريق. اشرح لي الأمور بلغة واضحة.",
+      "language": "اللغة — لغتك، يمكنك تغييرها في الإعدادات في أي وقت"
     },
     "welcome": {
       "headline": "نسختك والأرضية التي تُديرها",
@@ -1354,6 +1362,7 @@
     "clearAllTitle": "امسح كل الرسائل المصفوفة",
     "clearAll": "امسح الكل",
     "removeAttachment": "أزِل المرفق",
+    "sendHint": "Enter للإرسال · Shift+Enter لسطر جديد",
     "messagePlaceholder": "راسِل {{name}}",
     "busyPlaceholder": "{{name}} مشغول — أضِف رسالة إلى الطابور",
     "files": "ملفات",

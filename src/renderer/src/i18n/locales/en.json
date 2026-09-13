@@ -153,6 +153,8 @@
     "ideTip": "Open the IDE: browse and edit files in {{project}}, and see uncommitted changes as a diff.",
     "terminalTip": "Open your system terminal app in {{cwd}} — a normal shell in this agent's folder, separate from the agent's own terminal.",
     "repairFolder": "Repair folder",
+    "deadTitle": "No live terminal",
+    "deadDesc": "This agent is archived or its process ended. Restore it, or rebind its folder if the project moved on disk.",
     "repairBtn": "Repair",
     "repaired": "Folder updated.",
     "repairFailed": "Repair failed.",
@@ -433,7 +435,8 @@
       "activity": "activity",
       "skills": "skills",
       "workers": "workers",
-      "spend": "spend"
+      "spend": "spend",
+      "more": "more"
     },
     "terminalFullscreen": "Terminal is open in fullscreen. Press Esc to bring it back.",
     "noTerminal": "{{name}} has no live terminal.",
@@ -512,7 +515,11 @@
     "openIdeAria": "Open the IDE",
     "spendTitle": "SPEND — TODAY (IST)",
     "spendToday": "today",
-    "spendUnattributed": "unattributed"
+    "spendUnattributed": "unattributed",
+    "spendCapNote": "{{pct}}% of ${{cap}} daily cap",
+    "spendCapWarn": "80%+ of daily cap — new spawns stop at 100%",
+    "spendCapBlocked": "Daily cap reached — new spawns refused, running agents finish untouched",
+    "spendEstimated": "incl. ${{usd}} estimated (default-priced models)"
   },
   "addAgent": {
     "title": "ADD AGENT",
@@ -637,7 +644,8 @@
       "technicalTitle": "I'M TECHNICAL",
       "technicalDesc": "I write code or work in a terminal. Show me CLI commands, flags, and model ids.",
       "nonTechnicalTitle": "I'M NON-TECHNICAL",
-      "nonTechnicalDesc": "I'm in marketing, sales, ops, or just starting out. Explain things in plain language."
+      "nonTechnicalDesc": "I'm in marketing, sales, ops, or just starting out. Explain things in plain language.",
+      "language": "LANGUAGE — yours, change anytime in Settings"
     },
     "welcome": {
       "headline": "YOUR CLONE AND THE FLOOR IT RUNS",
@@ -1354,6 +1362,7 @@
     "clearAllTitle": "Clear all queued messages",
     "clearAll": "clear all",
     "removeAttachment": "Remove attachment",
+    "sendHint": "Enter to send · Shift+Enter for new line",
     "messagePlaceholder": "Message {{name}}",
     "busyPlaceholder": "{{name}} is busy — queue a message",
     "files": "files",

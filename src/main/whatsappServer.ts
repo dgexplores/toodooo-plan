@@ -27,6 +27,10 @@ export interface WhatsAppServerOptions {
   allowlist: readonly string[];
   onMessage: (msg: { from: string; text: string; messageId: string }) => void;
   onSkip?: (reasons: string[]) => void;
+  /** Non-allowlisted text: held for the owner, never auto-executed (R-07). */
+  onHeld?: (msg: { from: string; text: string; messageId: string }) => void;
+  /** Allowlisted non-text (image/voice/…): explicit "not yet" note (R-08). */
+  onMedia?: (msg: { from: string; messageId: string; kind: string }) => void;
 }
 
 export class WhatsAppServer {
@@ -154,19 +158,38 @@ export class WhatsAppServer {
       res.end();
       return;
     }
-    const { messages, skipped } = parseInbound(body);
+    const { messages, skipped, media } = parseInbound(body);
     if (skipped.length > 0) {
       try {
         this.opts.onSkip?.(skipped);
       } catch { /* observability only */ }
     }
-    for (const m of messages) {
-      if (this.seen.includes(m.messageId)) continue;
-      this.seen.push(m.messageId);
+    const fresh = (id: string): boolean => {
+      if (this.seen.includes(id)) return false;
+      this.seen.push(id);
       this.seen = this.seen.slice(-DEDUPE_KEEP);
-      if (!isAllowed(m.from, this.opts.allowlist)) continue;
+      return true;
+    };
+    for (const m of messages) {
+      if (!fresh(m.messageId)) continue;
+      if (!isAllowed(m.from, this.opts.allowlist)) {
+        try {
+          this.opts.onHeld?.(m);
+        } catch { /* one bad message must not break the batch */ }
+        continue;
+      }
       try {
         this.opts.onMessage(m);
+      } catch { /* one bad message must not break the batch */ }
+    }
+    for (const m of media) {
+      if (!fresh(m.messageId)) continue;
+      try {
+        if (!isAllowed(m.from, this.opts.allowlist)) {
+          this.opts.onHeld?.({ from: m.from, text: `[${m.kind} — not supported yet]`, messageId: m.messageId });
+        } else {
+          this.opts.onMedia?.(m);
+        }
       } catch { /* one bad message must not break the batch */ }
     }
     res.writeHead(200, { 'content-type': 'application/json' });
