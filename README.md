@@ -2,6 +2,8 @@
 
 # toodooo
 
+[![CI](https://github.com/dgexplores/toodooo-plan/actions/workflows/ci.yml/badge.svg)](https://github.com/dgexplores/toodooo-plan/actions/workflows/ci.yml)
+
 ### Your own office of AI workers — headed by Deepak
 
 **toodooo** turns the terminal AI CLIs you already use (Claude Code, Codex,
@@ -17,6 +19,14 @@ skills required.
 
 </div>
 
+## 60-second brief
+
+**What:** A 2D-office Electron app that turns the terminal AI CLIs you already use (Claude Code, Codex, Gemini) into a coordinated worker team — dispatch once to Deepak, watch agents work their desks, with shared memory, spend caps, and Slack/WhatsApp reach.
+
+**Stack:** Electron + Vite + TypeScript, local-first, BM25 memory search, Slack threads + WhatsApp Cloud inlets.
+
+**Structure:** [`src/`](src/) app · [`blueprint/`](blueprint/) vision, architecture, and bug register · [`hive/`](hive/) agent coordination · [`docs/`](docs/) guides · [`scripts/`](scripts/) tooling.
+
 ## Why toodooo
 
 One boss, many hands. You dispatch a task once to **Deepak** — he breaks it
@@ -31,7 +41,7 @@ one screen instead of babysitting twelve terminals.
   behind Advanced.
 - **Simple Command Center** — six daily tabs (terminal, monitor, tasks,
   ask me, workers, spend); power tabs hide behind More.
-- **Full Hindi UI** (1239 strings, enforced by CI) plus English, العربية
+- **Full Hindi UI** (1290 strings, enforced by CI) plus English, العربية
   and 中文.
 - **Avatars that read true** — typing, reading, coffee breaks, cheers,
   blocked-at-the-door; installing agents show as installing, dead ones
